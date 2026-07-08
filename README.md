@@ -1,4 +1,5 @@
 # QAKey — Q&A Key ("Quackie") 🦆
+## Active Development July 2026 - 🚧
 
 QAKey is built to deliver reliable, approved answers in plain language, without requiring teams to run a full AI platform. It favors deterministic truth over open-ended generation, keeps knowledge ownership with people, and supports both small teams and larger organizations that need governance and auditability.
 
