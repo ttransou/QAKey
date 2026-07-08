@@ -34,6 +34,12 @@ QAKey is built around a simple idea:
 
 ---
 
+## Current scope (July 8 2026)
+
+QAKey currently provides a local web UI, a spreadsheet-like content editor, a YAML-backed knowledge store, a REST API, a deterministic matching engine, and a publish workflow. The framework is intentionally minimal: advanced enterprise features such as SSO, role-based permissions, analytics dashboards, and managed cloud deployment are treated as extension points rather than core requirements.
+
+---
+
 ## Philosophy
 
 ### 1) Deterministic over creative
@@ -42,15 +48,21 @@ QAKey intentionally returns approved answers verbatim. This avoids hallucination
 
 ### 2) Human-owned knowledge
 
-The system helps users find answers, but people own the answers. Subject matter experts and maintainers stay in control of wording, status, and review lifecycle.
+The system helps users find answers, but people own the answers. Subject matter experts and maintainers retain control over wording, status, and the review lifecycle.
 
 ### 3) Practical NLP, not model ops
 
-Matching is based on lightweight NLP and synonyms, so teams can improve quality with better records and term mappings, not expensive retraining cycles.
+Matching is based on lightweight NLP and synonyms, so teams can improve quality through better records and term mappings, rather than expensive retraining cycles.
 
 ### 4) Operational clarity
 
-Every record has status and metadata. You can explain where an answer came from, who updated it, and when it changed.
+Every record has a status and metadata. You can explain where an answer came from, who updated it, and when it changed.
+
+### 5) AI accessibility
+
+QAKey treats accessibility as an architectural requirement. The people who know the answers should be able to maintain the answers. A maintainer should not need to understand code, YAML, embeddings, model operations, or deployment pipelines to keep approved information up to date.
+
+Technical teams can extend QAKey with stronger governance, integrations, authentication, analytics, or deployment controls, but those capabilities should add power without making technical expertise the price of participation.
 
 ---
 
@@ -117,7 +129,7 @@ QAKey can be a practical "trusted answer layer" inside a broader knowledge archi
 
 ## Source-of-Truth Framework
 
-QAKey is built around a spreadsheet-like editing model for maintainers who should not need coding, repository, or YAML knowledge.
+QAKey is built around a spreadsheet-like editing model for maintainers who should not need knowledge of coding, repositories, or YAML.
 They manage the approved question, answer, status, and review ownership, while QAKey handles identifiers, timestamps, validation, versioning, persistence, and index rebuilds automatically.
 
 See [docs/source-of-truth-framework.md](docs/source-of-truth-framework.md) for the full framework and maintainer workflow.
@@ -238,8 +250,7 @@ QAKey ships with a **web UI** and a **REST API**.
 
 ### Query interface (`/`)
 
-End-users type a question naturally. QAKey returns the matched approved answer
-with a confidence score, or a configurable no-match message.
+End-users type a question naturally. QAKey returns the matched approved answer with a confidence score, or a configurable no-match message.
 
 ### Content editor (`/editor`)
 
@@ -250,10 +261,10 @@ YAML or code:
 2. **Edit/Inspect** fields and metadata (including contributor/reviewer ownership).
 3. **Import** records from CSV/XLSX with preview and defaults (optional accelerator, not the primary path).
 4. **Export** records to CSV/XLSX for auditing.
-5. **Stage** unpublished changes with explicit publish summary and ID-level entries.
+5. **Stage** unpublished changes with an explicit publish summary and ID-level entries.
 6. Click **Publish Updates** to validate all records, save to YAML, and rebuild the index.
 
-When `editor.require_auth` is enabled, `/editor` is protected by a built-in admin/password login. This simple model can be replaced by organization auth later.
+When `editor.require_auth` is enabled, `/editor` is protected by a built-in admin/password login. This simple model can be replaced by an organization auth later.
 
 ### REST API
 
