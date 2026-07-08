@@ -1,14 +1,101 @@
-# QAKey — Q&A Key ("Quackie")
+# QAKey — Q&A Key ("Quackie") 🦆
+
+QAKey is built to deliver reliable, approved answers in plain language, without requiring teams to run a full AI platform. It favors deterministic truth over open-ended generation, keeps knowledge ownership with people, and supports both small teams and larger organizations that need governance and auditability.
+
+In practice, this means QAKey is designed to:
+
+- Return approved answers predictably across channels
+- Reduce repeated support questions and speed up onboarding
+- Lower risk from outdated or inconsistent responses
+- Shorten the path from policy change to published guidance
+
+QAKey is not designed to be an autonomous policy decision-maker or a broad, generative answer engine beyond your approved knowledge base.
 
 **A minimal, deterministic question-answering framework for organizations.**
 
-QAKey maps naturally phrased user questions to canonical questions and returns
-the corresponding approved answer *exactly* as maintained in the knowledge base.
+QAKey maps naturally phrased user questions to canonical questions and returns the corresponding approved answer *exactly* as maintained in the knowledge base.
 It does not generate answers — every response is deterministic and fully controlled.
+
+It is designed for people who need reliable answers without running a full AI platform: website maintainers, internal ops teams, support teams, and "accidental tech" owners in nonprofits, schools, and small businesses.
 
 ---
 
-## Features
+## Why QAKey exists
+
+Most teams do not actually need generated answers for core policy and process questions.
+They need consistency, auditability, and fast updates by the people who own the content.
+
+QAKey is built around a simple idea:
+
+- Questions can be asked in many ways.
+- Answers should come from one approved source of truth.
+- Content owners should be able to update that source without developer bottlenecks.
+
+---
+
+## Philosophy
+
+### 1) Deterministic over creative
+
+QAKey intentionally returns approved answers verbatim. This avoids hallucinations, policy drift, and "close enough" responses that can cause operational problems.
+
+### 2) Human-owned knowledge
+
+The system helps users find answers, but people own the answers. Subject matter experts and maintainers stay in control of wording, status, and review lifecycle.
+
+### 3) Practical NLP, not model ops
+
+Matching is based on lightweight NLP and synonyms, so teams can improve quality with better records and term mappings, not expensive retraining cycles.
+
+### 4) Operational clarity
+
+Every record has status and metadata. You can explain where an answer came from, who updated it, and when it changed.
+
+---
+
+## Expected outcomes
+
+Teams typically use QAKey to achieve outcomes like:
+
+- Fewer repeated "where do I find..." or "what is our policy on..." questions
+- Faster onboarding for staff, volunteers, and rotating support members
+- More consistent answers across channels (website, chatbot, internal tools)
+- Lower risk from inconsistent or outdated responses
+- Shorter turnaround from policy change to published answer
+
+In short: less answer chaos, more confidence.
+
+---
+
+## Why it is a strong fit for small teams
+
+If you are the "techy" person in a nonprofit or small organization, QAKey is built for your reality:
+
+- Minimal stack: Python + YAML + Flask, easy to run and reason about
+- Non-developer editing: content can be maintained in the built-in editor
+- Deterministic behavior: easier to trust and explain to leadership
+- Low maintenance: no prompt engineering pipelines or model tuning required
+- Incremental adoption: start with a small FAQ and grow safely over time
+
+You can deliver useful, reliable Q&A without becoming an AI platform team.
+
+---
+
+## Why it also works inside larger organizations
+
+Large organizations often need controlled, auditable knowledge delivery. QAKey supports that model while staying simple:
+
+- Governance-friendly: approved answers, lifecycle states, and reviewer metadata
+- Integration-ready: REST API for portals, chat surfaces, and internal assistants
+- Domain adaptable: synonym mapping supports business language and abbreviations
+- Deployment-flexible: run as a service, embed in existing products, or expose via API
+- Team separation: policy owners maintain content while engineering manages integration
+
+QAKey can be a practical "trusted answer layer" inside a broader knowledge architecture.
+
+---
+
+## Features 🦆
 
 | Capability | Description |
 |---|---|
@@ -21,6 +108,22 @@ It does not generate answers — every response is deterministic and fully contr
 | **Synonym support** | Domain-specific terms and abbreviations handled transparently |
 | **REST API** | All operations available as JSON endpoints |
 | **Deployment-agnostic** | Web UI, API, chatbot integration, or embedded widget |
+
+---
+
+## Is QAKey the right tool?
+
+QAKey is a great fit when:
+
+- You need high-confidence answers from approved content
+- You want non-developers to maintain knowledge safely
+- You value transparency and predictable behavior over open-ended generation
+
+It may be a weaker fit when:
+
+- You need broad, generative responses beyond a defined knowledge base
+- You do not have owners who can keep canonical answers current
+- You want autonomous agents making policy decisions
 
 ---
 
@@ -60,7 +163,7 @@ Open **http://127.0.0.1:5000** to ask questions and
 
 ---
 
-## Repository structure
+## Repository structure 🦆
 
 ```
 QAKey/
