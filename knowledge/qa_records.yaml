@@ -1,0 +1,207 @@
+records:
+- id: qa-0001
+  canonical_question: What are your business hours?
+  answer: 'We are open Monday through Friday, 9 AM to 5 PM Eastern Time. We are closed
+    on weekends and federal holidays.
+
+    '
+  status: Active
+  alternate_phrasings:
+  - When are you open?
+  - What time do you open?
+  - Hours of operation
+  - When can I reach you?
+  - Office hours
+  tags:
+  - hours
+  - contact
+  - operations
+  contributor: staff@example.com
+  reviewer: admin@example.com
+  created_at: '2024-01-01T00:00:00Z'
+  updated_at: '2024-01-01T00:00:00Z'
+  version: 1
+- id: qa-0002
+  canonical_question: How do I reset my password?
+  answer: 'To reset your password, click "Forgot Password" on the login page and enter
+    your registered email address. You will receive a reset link within 5 minutes.
+    If you do not receive the email, check your spam folder or contact support@example.com.
+
+    '
+  status: Active
+  alternate_phrasings:
+  - I forgot my password
+  - Can't log in
+  - Password reset instructions
+  - How to change password
+  - Lost access to my account
+  tags:
+  - account
+  - password
+  - authentication
+  contributor: it@example.com
+  reviewer: admin@example.com
+  created_at: '2024-01-01T00:00:00Z'
+  updated_at: '2024-01-01T00:00:00Z'
+  version: 1
+- id: qa-0003
+  canonical_question: What is the vacation and paid time off policy?
+  answer: 'Full-time employees receive 15 days of paid vacation per calendar year,
+    accrued monthly. New hires begin accruing from their first day of employment.
+    Unused vacation may be carried over up to a maximum of 5 days. Part-time employees
+    accrue leave on a pro-rated basis. Please refer to the Employee Handbook for full
+    details or contact hr@example.com.
+
+    '
+  status: Active
+  alternate_phrasings:
+  - How many vacation days do I get?
+  - PTO policy
+  - Time off rules
+  - Annual leave entitlement
+  - How many days off do I have?
+  tags:
+  - hr
+  - vacation
+  - benefits
+  - policy
+  contributor: hr@example.com
+  reviewer: director@example.com
+  created_at: '2024-01-01T00:00:00Z'
+  updated_at: '2024-01-01T00:00:00Z'
+  version: 1
+- id: qa-0004
+  canonical_question: How do I submit an expense report?
+  answer: 'Submit expense reports through the Finance portal at finance.example.com/expenses.
+    Attach all receipts, select the appropriate cost center, and submit within 30
+    days of the expense date. Approval typically takes 5 business days. Reimbursements
+    are issued with the next payroll cycle. Contact finance@example.com for assistance.
+
+    '
+  status: Active
+  alternate_phrasings:
+  - Expense reimbursement process
+  - How to get reimbursed
+  - Submit expenses
+  - Expense claim form
+  - Travel expense policy
+  tags:
+  - finance
+  - expenses
+  - reimbursement
+  contributor: finance@example.com
+  reviewer: cfo@example.com
+  created_at: '2024-01-01T00:00:00Z'
+  updated_at: '2024-01-01T00:00:00Z'
+  version: 1
+- id: qa-0005
+  canonical_question: Where can I find the employee handbook?
+  answer: 'The Employee Handbook is available on the company intranet at intranet.example.com/handbook.
+    A printed copy can also be requested from HR. The handbook is reviewed and updated
+    annually; the current version and revision date are shown on the cover page.
+
+    '
+  status: Active
+  alternate_phrasings:
+  - Staff handbook location
+  - Where are the HR policies?
+  - Company policies document
+  - How do I access HR documentation?
+  tags:
+  - hr
+  - handbook
+  - policies
+  contributor: hr@example.com
+  reviewer: admin@example.com
+  created_at: '2024-01-01T00:00:00Z'
+  updated_at: '2024-01-01T00:00:00Z'
+  version: 1
+- id: qa-0006
+  canonical_question: What health and dental benefits are available?
+  answer: 'We offer comprehensive medical, dental, and vision coverage through our
+    benefits provider. Employees may enroll during the annual open enrollment period
+    or within 30 days of a qualifying life event. Plan summaries, premium schedules,
+    and enrollment forms are available on the HR portal. For personalized assistance
+    contact benefits@example.com.
+
+    '
+  status: Active
+  alternate_phrasings:
+  - Medical insurance options
+  - Benefits package
+  - Health coverage
+  - Dental plan
+  - Vision insurance
+  tags:
+  - hr
+  - benefits
+  - insurance
+  - health
+  contributor: hr@example.com
+  reviewer: director@example.com
+  created_at: '2024-01-01T00:00:00Z'
+  updated_at: '2024-01-01T00:00:00Z'
+  version: 1
+- id: qa-0007
+  canonical_question: How do I report a technical issue or request IT support?
+  answer: 'Submit IT support requests through the helpdesk portal at help.example.com
+    or by emailing it@example.com. For urgent issues call the IT hotline at +1-800-555-0199
+    (available 8 AM–6 PM ET, weekdays). Include a description of the issue, affected
+    device or system, and any error messages. Response time is typically within 2
+    business hours for critical issues.
+
+    '
+  status: Active
+  alternate_phrasings:
+  - IT helpdesk
+  - Report a bug
+  - Computer problems
+  - Technical support contact
+  - IT ticket system
+  - How to open a support ticket
+  tags:
+  - it
+  - support
+  - helpdesk
+  - technical
+  contributor: it@example.com
+  reviewer: cto@example.com
+  created_at: '2024-01-01T00:00:00Z'
+  updated_at: '2024-01-01T00:00:00Z'
+  version: 1
+- id: qa-0008
+  canonical_question: What is the remote work and work-from-home policy?
+  answer: 'Eligible employees may work remotely up to 3 days per week with manager
+    approval. Remote arrangements must be documented in the HR system. Employees are
+    expected to be available during core hours (10 AM–3 PM ET) and maintain a professional
+    remote work environment. Please review the Remote Work Policy on the intranet
+    for full requirements and eligibility criteria.
+
+    '
+  status: Draft
+  alternate_phrasings:
+  - Can I work from home?
+  - Remote work rules
+  - WFH policy
+  - Telecommuting policy
+  - Hybrid work schedule
+  tags:
+  - hr
+  - remote
+  - policy
+  contributor: hr@example.com
+  reviewer: ''
+  created_at: '2024-01-15T00:00:00Z'
+  updated_at: '2024-01-15T00:00:00Z'
+  version: 1
+- id: qa-4eada258
+  canonical_question: Test question?
+  answer: Test answer.
+  status: Draft
+  alternate_phrasings: []
+  tags: []
+  contributor: ''
+  reviewer: ''
+  created_at: '2026-07-08T14:35:54Z'
+  updated_at: '2026-07-08T14:35:54Z'
+  version: 1
