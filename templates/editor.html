@@ -10,6 +10,54 @@
   .status-inactive { color: #dc3545; font-weight: 600; }
   .truncate        { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #publishBar      { position: sticky; top: 0; z-index: 100; }
+  .import-answer-preview { white-space: pre-wrap; line-height: 1.6; margin: 0; }
+  .workspace-hero {
+    background: linear-gradient(135deg, #f4f8ff 0%, #eef9f3 100%);
+    border: 1px solid #dbe7ff;
+    border-radius: 1rem;
+  }
+  .workspace-stat {
+    border: 1px solid #e5e7eb;
+    border-radius: 1rem;
+    background: #fff;
+  }
+  .workspace-stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .workspace-panel {
+    border: 1px solid #e5e7eb;
+    border-radius: 1rem;
+    background: #fff;
+  }
+  .workspace-helper-list {
+    padding-left: 1rem;
+    margin-bottom: 0;
+  }
+  .review-queue-empty {
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.85rem;
+    background: #f8fafc;
+  }
+  .record-detail-cell {
+    background: #fbfcff;
+  }
+  .record-detail-answer {
+    white-space: pre-wrap;
+  }
+  .editor-theme-toggle .btn {
+    min-width: 2.25rem;
+  }
+  .publish-stage-empty {
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.75rem;
+    background: #f8fafc;
+  }
+  .publish-stage-records {
+    max-height: 180px;
+    overflow: auto;
+  }
 </style>
 {% endblock %}
 
@@ -20,6 +68,32 @@
   <h5 class="mb-0 me-auto fw-bold">
     <i class="bi bi-table me-1 text-primary"></i>Content Editor
   </h5>
+  <span id="dirtyBadge" class="badge text-bg-warning d-none">Unpublished changes</span>
+  <button id="undoChangeBtn" class="btn btn-outline-secondary btn-sm" disabled>
+    <i class="bi bi-arrow-counterclockwise me-1"></i>Undo Last
+  </button>
+  <div class="btn-group btn-group-sm editor-theme-toggle" role="group" aria-label="Editor theme mode">
+    <button type="button" class="btn btn-outline-secondary editor-theme-mode-btn" data-theme-mode="light" aria-label="Light mode" title="Light mode">
+      <i class="bi bi-sun-fill" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="btn btn-outline-secondary editor-theme-mode-btn" data-theme-mode="dark" aria-label="Dark mode" title="Dark mode">
+      <i class="bi bi-moon-stars-fill" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="btn btn-outline-secondary editor-theme-mode-btn" data-theme-mode="system" aria-label="System mode" title="System mode">
+      <i class="bi bi-circle-half" aria-hidden="true"></i>
+    </button>
+  </div>
+  <div class="btn-group btn-group-sm" role="group" aria-label="Export records">
+    <button id="exportCsvBtn" class="btn btn-outline-secondary" type="button" title="Export records as CSV">
+      <i class="bi bi-filetype-csv"></i>
+    </button>
+    <button id="exportXlsxBtn" class="btn btn-outline-secondary" type="button" title="Export records as XLSX">
+      <i class="bi bi-filetype-xlsx"></i>
+    </button>
+  </div>
+  <button id="bulkImportBtn" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-file-earmark-arrow-up me-1"></i>Import CSV/XLSX
+  </button>
   <button id="addRowBtn" class="btn btn-outline-primary btn-sm">
     <i class="bi bi-plus-lg me-1"></i>New Record
   </button>
@@ -28,8 +102,154 @@
   </button>
 </div>
 
+<section class="workspace-hero p-4 mb-4">
+  <div class="row g-4 align-items-center">
+    <div class="col-lg-8">
+      <div class="text-uppercase small fw-semibold text-primary mb-2">Source-of-Truth Workspace</div>
+      <h2 class="h3 fw-bold mb-2">Build and govern your approved Q&A repository without touching code.</h2>
+      <p class="mb-0 text-muted">
+        Maintain canonical questions, approved answers, lifecycle state, and reviewer ownership in one place.
+        QAKey handles IDs, timestamps, validation, versioning, publish, and index rebuild automatically.
+      </p>
+    </div>
+    <div class="col-lg-4">
+      <div class="workspace-panel p-3 h-100">
+        <div class="small text-uppercase fw-semibold text-muted mb-2">Maintainer flow</div>
+        <ol class="small mb-0 ps-3">
+          <li>Add or import Q&A pairs</li>
+          <li>Amend wording and ownership</li>
+          <li>Set `Draft`, `Active`, or `Inactive`</li>
+          <li>Publish approved updates</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="row g-3 mb-4" id="workspaceStats">
+  <div class="col-sm-6 col-xl-3">
+    <div class="workspace-stat p-3 h-100">
+      <div class="small text-uppercase fw-semibold text-muted mb-2">Total records</div>
+      <div class="workspace-stat-value" id="statTotal">0</div>
+      <div class="small text-muted">All maintained Q&A pairs</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="workspace-stat p-3 h-100">
+      <div class="small text-uppercase fw-semibold text-muted mb-2">Active</div>
+      <div class="workspace-stat-value text-success" id="statActive">0</div>
+      <div class="small text-muted">Currently available to end users</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="workspace-stat p-3 h-100">
+      <div class="small text-uppercase fw-semibold text-muted mb-2">Draft</div>
+      <div class="workspace-stat-value text-secondary" id="statDraft">0</div>
+      <div class="small text-muted">Still being authored or reviewed</div>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="workspace-stat p-3 h-100">
+      <div class="small text-uppercase fw-semibold text-muted mb-2">Inactive</div>
+      <div class="workspace-stat-value text-danger" id="statInactive">0</div>
+      <div class="small text-muted">Sunset pairs kept out of live answers</div>
+    </div>
+  </div>
+</section>
+
+<section class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="workspace-panel p-3 h-100">
+      <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+        <div>
+          <h3 class="h6 fw-bold mb-1">Repository controls</h3>
+          <div class="small text-muted">Find, filter, add, amend, publish, or sunset Q&A pairs.</div>
+        </div>
+        <div class="small text-muted" id="recordsSummary">Loading records…</div>
+      </div>
+      <div class="row g-2">
+        <div class="col-md-6">
+          <label for="recordSearchInput" class="form-label small fw-semibold">Search records</label>
+          <input type="search" id="recordSearchInput" class="form-control"
+                 placeholder="Search question, answer, contributor, reviewer, or tag" />
+        </div>
+        <div class="col-md-3">
+          <label for="statusFilter" class="form-label small fw-semibold">Status filter</label>
+          <select id="statusFilter" class="form-select">
+            <option value="All">All statuses</option>
+            <option value="Active">Active</option>
+            <option value="Draft">Draft</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        <div class="col-md-3 d-flex align-items-end">
+          <button id="clearFiltersBtn" type="button" class="btn btn-outline-secondary w-100">Clear filters</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="workspace-panel p-3 h-100">
+      <h3 class="h6 fw-bold mb-2">What maintainers can do here</h3>
+      <ul class="workspace-helper-list small text-muted">
+        <li>Add new canonical pairs one at a time</li>
+        <li>Bulk-import pasted FAQ or policy text</li>
+        <li>Amend live answers without editing YAML</li>
+        <li>Sunset old guidance by switching it to `Inactive`</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="workspace-panel p-3 h-100">
+      <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+        <div>
+          <h3 class="h6 fw-bold mb-1">Needs review</h3>
+          <div class="small text-muted">Draft records with no reviewer assigned yet.</div>
+        </div>
+        <span class="badge text-bg-warning" id="needsReviewCount">0</span>
+      </div>
+      <div id="needsReviewList" class="d-grid gap-2"></div>
+      <button id="showNeedsReviewBtn" type="button" class="btn btn-outline-warning btn-sm mt-3 w-100">
+        Show draft records needing review
+      </button>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="workspace-panel p-3 h-100">
+      <h3 class="h6 fw-bold mb-1">Record inspection</h3>
+      <div class="small text-muted mb-2">
+        Expand any row to inspect the full approved answer, tags, alternates, and ownership without opening the edit modal.
+      </div>
+      <div class="small text-muted mb-0">
+        Use <strong>Inspect</strong> to review formatting-heavy answers, and use <strong>Sunset</strong> to move old guidance out of live matching while preserving history.
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- Feedback banner -->
 <div id="feedbackBanner" class="d-none mb-3"></div>
+
+<section class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="workspace-panel p-3" id="publishStagePanel">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <div>
+          <h3 class="h6 fw-bold mb-1">Publishing stage</h3>
+          <div class="small text-muted" id="publishStageSummary">No unpublished changes are currently staged.</div>
+        </div>
+        <button id="publishStageBtn" type="button" class="btn btn-success btn-sm" disabled>
+          <i class="bi bi-cloud-upload-fill me-1"></i>Publish Staged Changes
+        </button>
+      </div>
+      <div id="publishStageList" class="d-flex flex-wrap gap-2"></div>
+      <div id="publishStageRecords" class="publish-stage-records mt-2 small"></div>
+    </div>
+  </div>
+</section>
 
 <!-- Records table -->
 <div class="table-responsive">
@@ -79,6 +299,13 @@
 
         <div class="mb-3">
           <label class="form-label fw-semibold">Answer <span class="text-danger">*</span></label>
+          <div class="btn-toolbar mb-2" role="toolbar" aria-label="Answer formatting">
+            <div class="btn-group btn-group-sm" role="group">
+              <button type="button" class="btn btn-outline-secondary answer-format-btn" data-format="bold" title="Bold"><i class="bi bi-type-bold"></i></button>
+              <button type="button" class="btn btn-outline-secondary answer-format-btn" data-format="italic" title="Italic"><i class="bi bi-type-italic"></i></button>
+              <button type="button" class="btn btn-outline-secondary answer-format-btn" data-format="bullet" title="Bullet list"><i class="bi bi-list-ul"></i></button>
+            </div>
+          </div>
           <textarea id="editAnswer" class="form-control" rows="5"
                     placeholder="The approved, golden answer (returned verbatim)"></textarea>
         </div>
@@ -145,8 +372,112 @@
   </div>
 </div>
 
+<!-- Bulk Import Modal -->
+<div class="modal fade" id="bulkImportModal" tabindex="-1" aria-labelledby="bulkImportModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bulkImportModalLabel">Import Q&A File</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3 mb-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">File</label>
+            <input id="bulkImportFile" type="file" class="form-control" accept=".csv,.xlsx" />
+            <div class="form-text">Only CSV and XLSX files are allowed.</div>
+          </div>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-sm-4">
+            <label class="form-label fw-semibold">Default status</label>
+            <select id="bulkImportStatus" class="form-select">
+              <option value="Draft" selected>Draft</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label fw-semibold">Default contributor</label>
+            <input type="text" id="bulkImportContributor" class="form-control" placeholder="name or email" />
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label fw-semibold">Default reviewer</label>
+            <input type="text" id="bulkImportReviewer" class="form-control" placeholder="name or email" />
+          </div>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">Default tags</label>
+            <input type="text" id="bulkImportTags" class="form-control" placeholder="e.g. hr, policy, benefits" />
+          </div>
+        </div>
+        <div class="d-flex gap-2 mb-3">
+          <button type="button" id="previewImportBtn" class="btn btn-primary">
+            <i class="bi bi-search me-1"></i>Preview File
+          </button>
+          <button type="button" id="applyImportBtn" class="btn btn-success" disabled>
+            <i class="bi bi-download me-1"></i>Import Records
+          </button>
+        </div>
+        <div id="bulkImportErrors" class="d-none alert alert-danger small"></div>
+        <div id="bulkImportSummary" class="small text-muted mb-2">No preview yet.</div>
+        <div id="bulkImportPreview" class="border rounded p-3 bg-light-subtle small" style="min-height: 220px; max-height: 420px; overflow:auto;">
+          <div class="text-muted">Parsed records will appear here after preview.</div>
+        </div>
+          </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
+<script>
+  (function setupEditorThemeMode() {
+    const key = "qakey-theme-mode";
+    const root = document.documentElement;
+    const buttons = Array.from(document.querySelectorAll(".editor-theme-mode-btn"));
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+
+    function resolveTheme(mode) {
+      if (mode === "system") {
+        return media.matches ? "dark" : "light";
+      }
+      return mode;
+    }
+
+    function applyTheme(mode) {
+      root.setAttribute("data-bs-theme", resolveTheme(mode));
+      buttons.forEach(btn => {
+        const active = btn.dataset.themeMode === mode;
+        btn.classList.toggle("active", active);
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+    }
+
+    const savedMode = localStorage.getItem(key);
+    const mode = savedMode === "light" || savedMode === "dark" || savedMode === "system"
+      ? savedMode
+      : "system";
+
+    applyTheme(mode);
+
+    buttons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const selected = btn.dataset.themeMode;
+        localStorage.setItem(key, selected);
+        applyTheme(selected);
+      });
+    });
+
+    media.addEventListener("change", () => {
+      if ((localStorage.getItem(key) || "system") === "system") {
+        applyTheme("system");
+      }
+    });
+  })();
+</script>
 <script src="/static/js/editor.js"></script>
 {% endblock %}

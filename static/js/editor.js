@@ -6,19 +6,36 @@
 // ---------------------------------------------------------------------------
 let records = [];
 let pendingDeleteId = null;
+let importPreviewRecords = [];
+let recordSearch = "";
+let statusFilter = "All";
+let expandedRecordId = null;
+let undoStack = [];
+let hasUnpublishedChanges = false;
 
 const editModal   = new bootstrap.Modal(document.getElementById("editModal"));
 const deleteModal = new bootstrap.Modal(document.getElementById("deleteModal"));
+const bulkImportModal = new bootstrap.Modal(document.getElementById("bulkImportModal"));
 
 // ---------------------------------------------------------------------------
 // API helpers
 // ---------------------------------------------------------------------------
 async function api(method, path, body) {
-  const opts = { method, headers: { "Content-Type": "application/json" } };
-  if (body !== undefined) opts.body = JSON.stringify(body);
+  const opts = { method, headers: {} };
+  if (body !== undefined) {
+    if (body instanceof FormData) {
+      opts.body = body;
+    } else {
+      opts.headers["Content-Type"] = "application/json";
+      opts.body = JSON.stringify(body);
+    }
+  }
   const res = await fetch(path, opts);
-  if (res.status === 204) return null;
-  return res.json();
+  const payload = res.status === 204 ? null : await res.json();
+  if (!res.ok) {
+    throw new Error((payload && payload.error) || `Request failed with ${res.status}`);
+  }
+  return payload;
 }
 
 // ---------------------------------------------------------------------------
@@ -27,7 +44,11 @@ async function api(method, path, body) {
 async function loadRecords() {
   try {
     records = await api("GET", "/api/records");
+    undoStack = [];
+    setDirty(false);
+    renderUndoState();
     renderTable();
+    renderWorkspaceSummary();
   } catch (e) {
     showBanner("danger", "Failed to load records: " + e.message);
   }
@@ -41,6 +62,8 @@ function statusBadge(status) {
 
 function renderTable() {
   const tbody = document.getElementById("recordsTbody");
+  const visibleRecords = getVisibleRecords();
+
   if (!records || records.length === 0) {
     tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">
       No records yet. Click <strong>New Record</strong> to add one.
@@ -48,7 +71,14 @@ function renderTable() {
     return;
   }
 
-  tbody.innerHTML = records.map(r => `
+  if (visibleRecords.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">
+      No records match the current filters.
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = visibleRecords.map(r => `
     <tr data-id="${escHtml(r.id)}">
       <td class="font-monospace small text-muted" title="${escHtml(r.id)}">${escHtml(r.id)}</td>
       <td class="truncate" title="${escHtml(r.canonical_question)}">${escHtml(r.canonical_question)}</td>
@@ -61,15 +91,50 @@ function renderTable() {
       <td class="text-muted small">${escHtml(r.reviewer || "—")}</td>
       <td class="text-center small text-muted">${escHtml(String(r.version || 1))}</td>
       <td>
+        <button class="btn btn-sm btn-outline-secondary inspect-btn me-1" title="Inspect record">
+          <i class="bi bi-eye-fill"></i>
+        </button>
         <button class="btn btn-sm btn-outline-primary edit-btn me-1" title="Edit">
           <i class="bi bi-pencil-fill"></i>
         </button>
+        ${r.status !== "Inactive" ? `
+        <button class="btn btn-sm btn-outline-warning sunset-btn me-1" title="Sunset to inactive">
+          <i class="bi bi-moon-stars-fill"></i>
+        </button>` : ""}
         <button class="btn btn-sm btn-outline-danger delete-btn" title="Delete">
           <i class="bi bi-trash-fill"></i>
         </button>
       </td>
     </tr>
+    ${expandedRecordId === r.id ? `
+    <tr class="record-detail-row" data-detail-id="${escHtml(r.id)}">
+      <td colspan="9" class="record-detail-cell p-0">
+        <div class="p-3 p-lg-4">
+          <div class="row g-3">
+            <div class="col-lg-7">
+              <div class="small text-uppercase fw-semibold text-muted mb-2">Approved answer</div>
+              <div class="rendered-answer record-detail-answer border rounded bg-white p-3">${escHtml(r.answer)}</div>
+            </div>
+            <div class="col-lg-5">
+              <div class="small text-uppercase fw-semibold text-muted mb-2">Record metadata</div>
+              <div class="border rounded bg-white p-3 small">
+                <div class="mb-2"><strong>Status:</strong> ${escHtml(r.status)}</div>
+                <div class="mb-2"><strong>Contributor:</strong> ${escHtml(r.contributor || "—")}</div>
+                <div class="mb-2"><strong>Reviewer:</strong> ${escHtml(r.reviewer || "—")}</div>
+                <div class="mb-2"><strong>Tags:</strong> ${escHtml((r.tags || []).join(", ") || "—")}</div>
+                <div><strong>Alternates:</strong><br>${escHtml((r.alternate_phrasings || []).join("\n") || "—")}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </td>
+    </tr>` : ""}
   `).join("");
+
+  tbody.querySelectorAll(".inspect-btn").forEach(btn => {
+    const id = btn.closest("tr").dataset.id;
+    btn.addEventListener("click", () => toggleRecordInspection(id));
+  });
 
   tbody.querySelectorAll(".edit-btn").forEach(btn => {
     const id = btn.closest("tr").dataset.id;
@@ -79,6 +144,259 @@ function renderTable() {
   tbody.querySelectorAll(".delete-btn").forEach(btn => {
     const id = btn.closest("tr").dataset.id;
     btn.addEventListener("click", () => openDeleteModal(id));
+  });
+
+  tbody.querySelectorAll(".sunset-btn").forEach(btn => {
+    const id = btn.closest("tr").dataset.id;
+    btn.addEventListener("click", () => sunsetRecord(id));
+  });
+
+  renderWorkspaceSummary();
+  renderNeedsReviewQueue();
+}
+
+function toggleRecordInspection(id) {
+  expandedRecordId = expandedRecordId === id ? null : id;
+  renderTable();
+}
+
+function getVisibleRecords() {
+  return records.filter(record => {
+    if (statusFilter !== "All" && record.status !== statusFilter) {
+      return false;
+    }
+
+    if (!recordSearch) {
+      return true;
+    }
+
+    const haystack = [
+      record.id,
+      record.canonical_question,
+      record.answer,
+      record.contributor,
+      record.reviewer,
+      ...(record.tags || []),
+      ...(record.alternate_phrasings || []),
+    ]
+      .join("\n")
+      .toLowerCase();
+
+    return haystack.includes(recordSearch);
+  });
+}
+
+function renderWorkspaceSummary() {
+  const total = records.length;
+  const active = records.filter(record => record.status === "Active").length;
+  const draft = records.filter(record => record.status === "Draft").length;
+  const inactive = records.filter(record => record.status === "Inactive").length;
+  const visible = getVisibleRecords().length;
+
+  document.getElementById("statTotal").textContent = String(total);
+  document.getElementById("statActive").textContent = String(active);
+  document.getElementById("statDraft").textContent = String(draft);
+  document.getElementById("statInactive").textContent = String(inactive);
+
+  const summary = document.getElementById("recordsSummary");
+  summary.textContent = `${visible} visible of ${total} total record(s)`;
+}
+
+function cloneRecord(record) {
+  return JSON.parse(JSON.stringify(record));
+}
+
+function setDirty(isDirty) {
+  hasUnpublishedChanges = isDirty;
+  const badge = document.getElementById("dirtyBadge");
+  badge.classList.toggle("d-none", !isDirty);
+}
+
+function pushUndo(action) {
+  undoStack.push(action);
+  renderUndoState();
+}
+
+function renderUndoState() {
+  document.getElementById("undoChangeBtn").disabled = undoStack.length === 0;
+  renderPublishStage();
+}
+
+function getPendingChangeStats() {
+  const stats = {
+    total: 0,
+    created: 0,
+    updated: 0,
+    deleted: 0,
+  };
+
+  for (const action of undoStack) {
+    if (action.type === "create") {
+      stats.created += 1;
+      stats.total += 1;
+    } else if (action.type === "batch-create") {
+      const count = (action.ids || []).length;
+      stats.created += count;
+      stats.total += count;
+    } else if (action.type === "update") {
+      stats.updated += 1;
+      stats.total += 1;
+    } else if (action.type === "delete") {
+      stats.deleted += 1;
+      stats.total += 1;
+    }
+  }
+
+  return stats;
+}
+
+function getPendingChangeEntries(limit = 12) {
+  const entries = [];
+
+  for (const action of undoStack) {
+    if (action.type === "create") {
+      entries.push({
+        action: "Created",
+        id: action.id,
+        question: action.question || "",
+      });
+    } else if (action.type === "update") {
+      const before = action.before || {};
+      entries.push({
+        action: "Updated",
+        id: before.id || "",
+        question: before.canonical_question || "",
+      });
+    } else if (action.type === "delete") {
+      const record = action.record || {};
+      entries.push({
+        action: "Deleted",
+        id: record.id || "",
+        question: record.canonical_question || "",
+      });
+    } else if (action.type === "batch-create") {
+      for (const item of action.items || []) {
+        entries.push({
+          action: "Created",
+          id: item.id || "",
+          question: item.question || "",
+        });
+      }
+    }
+  }
+
+  return entries.slice(-limit).reverse();
+}
+
+function renderPublishStage() {
+  const summary = document.getElementById("publishStageSummary");
+  const list = document.getElementById("publishStageList");
+  const recordsList = document.getElementById("publishStageRecords");
+  const stageBtn = document.getElementById("publishStageBtn");
+  const stats = getPendingChangeStats();
+
+  if (stats.total === 0) {
+    summary.textContent = "No unpublished changes are currently staged.";
+    list.innerHTML = '<div class="publish-stage-empty px-3 py-2 small text-muted">Make edits, imports, sunsets, or deletes to stage changes before publishing.</div>';
+    recordsList.innerHTML = "";
+    stageBtn.disabled = true;
+    return;
+  }
+
+  summary.textContent = `${stats.total} staged change(s) pending publish.`;
+  const chips = [];
+  if (stats.created) chips.push(`<span class="badge text-bg-success">Created: ${stats.created}</span>`);
+  if (stats.updated) chips.push(`<span class="badge text-bg-primary">Updated: ${stats.updated}</span>`);
+  if (stats.deleted) chips.push(`<span class="badge text-bg-danger">Deleted: ${stats.deleted}</span>`);
+  list.innerHTML = chips.join("");
+
+  const entries = getPendingChangeEntries();
+  recordsList.innerHTML = entries.map(entry => `
+    <div class="border rounded px-2 py-1 mb-1 bg-white">
+      <span class="badge text-bg-light border me-1">${escHtml(entry.action)}</span>
+      <span class="font-monospace">${escHtml(entry.id || "(pending id)")}</span>
+      ${entry.question ? `<span class="text-muted"> — ${escHtml(entry.question)}</span>` : ""}
+    </div>
+  `).join("");
+
+  stageBtn.disabled = false;
+}
+
+async function undoLastChange() {
+  const action = undoStack.pop();
+  if (!action) return;
+
+  try {
+    if (action.type === "create") {
+      await api("DELETE", `/api/records/${encodeURIComponent(action.id)}`);
+      records = records.filter(record => record.id !== action.id);
+    } else if (action.type === "update") {
+      const previous = action.before;
+      const restored = await api("PUT", `/api/records/${encodeURIComponent(previous.id)}`, {
+        canonical_question: previous.canonical_question,
+        alternate_phrasings: previous.alternate_phrasings || [],
+        answer: previous.answer,
+        status: previous.status,
+        contributor: previous.contributor || "",
+        reviewer: previous.reviewer || "",
+        tags: previous.tags || [],
+      });
+      const idx = records.findIndex(record => record.id === previous.id);
+      if (idx !== -1) records[idx] = restored;
+    } else if (action.type === "delete") {
+      const restored = await api("POST", "/api/records", action.record);
+      records.push(restored);
+    } else if (action.type === "batch-create") {
+      for (const id of action.ids) {
+        await api("DELETE", `/api/records/${encodeURIComponent(id)}`);
+      }
+      records = records.filter(record => !action.ids.includes(record.id));
+    }
+
+    setDirty(undoStack.length > 0);
+    renderUndoState();
+    renderTable();
+    showBanner("info", "Last unpublished change was undone.");
+  } catch (e) {
+    undoStack.push(action);
+    renderUndoState();
+    showBanner("danger", "Undo failed: " + e.message);
+  }
+}
+
+function getNeedsReviewRecords() {
+  return records.filter(record => record.status === "Draft" && !(record.reviewer || "").trim());
+}
+
+function renderNeedsReviewQueue() {
+  const needsReview = getNeedsReviewRecords();
+  const countNode = document.getElementById("needsReviewCount");
+  const listNode = document.getElementById("needsReviewList");
+
+  countNode.textContent = String(needsReview.length);
+
+  if (!needsReview.length) {
+    listNode.innerHTML = `
+      <div class="review-queue-empty p-3 text-muted small">
+        No draft records are currently missing a reviewer.
+      </div>`;
+    return;
+  }
+
+  listNode.innerHTML = needsReview.map(record => `
+    <button type="button" class="btn btn-outline-warning text-start review-item" data-id="${escHtml(record.id)}">
+      <div class="fw-semibold mb-1">${escHtml(record.canonical_question)}</div>
+      <div class="small text-muted">Contributor: ${escHtml(record.contributor || "unassigned")}</div>
+    </button>
+  `).join("");
+
+  listNode.querySelectorAll(".review-item").forEach(btn => {
+    const id = btn.dataset.id;
+    btn.addEventListener("click", () => {
+      expandedRecordId = id;
+      renderTable();
+      openEditModal(id);
+    });
   });
 }
 
@@ -132,13 +450,19 @@ document.getElementById("saveRecordBtn").addEventListener("click", async () => {
   try {
     let saved;
     if (id) {
+      const existing = records.find(record => record.id === id);
+      if (existing) {
+        pushUndo({ type: "update", before: cloneRecord(existing) });
+      }
       saved = await api("PUT", `/api/records/${encodeURIComponent(id)}`, payload);
       const idx = records.findIndex(r => r.id === id);
       if (idx !== -1) records[idx] = saved;
     } else {
       saved = await api("POST", "/api/records", payload);
       records.push(saved);
+      pushUndo({ type: "create", id: saved.id, question: saved.canonical_question || canonical });
     }
+    setDirty(true);
     renderTable();
     editModal.hide();
     showBanner("success",
@@ -162,8 +486,13 @@ function openDeleteModal(id) {
 document.getElementById("confirmDeleteBtn").addEventListener("click", async () => {
   if (!pendingDeleteId) return;
   try {
+    const deleted = records.find(record => record.id === pendingDeleteId);
+    if (deleted) {
+      pushUndo({ type: "delete", record: cloneRecord(deleted) });
+    }
     await api("DELETE", `/api/records/${encodeURIComponent(pendingDeleteId)}`);
     records = records.filter(r => r.id !== pendingDeleteId);
+    setDirty(true);
     renderTable();
     deleteModal.hide();
     showBanner("warning",
@@ -174,6 +503,34 @@ document.getElementById("confirmDeleteBtn").addEventListener("click", async () =
     showBanner("danger", "Delete failed: " + e.message);
   }
 });
+
+async function sunsetRecord(id) {
+  const record = records.find(item => item.id === id);
+  if (!record || record.status === "Inactive") return;
+
+  try {
+    pushUndo({ type: "update", before: cloneRecord(record) });
+    const saved = await api("PUT", `/api/records/${encodeURIComponent(id)}`, {
+      canonical_question: record.canonical_question,
+      alternate_phrasings: record.alternate_phrasings || [],
+      answer: record.answer,
+      status: "Inactive",
+      contributor: record.contributor || "",
+      reviewer: record.reviewer || "",
+      tags: record.tags || [],
+    });
+    const idx = records.findIndex(item => item.id === id);
+    if (idx !== -1) records[idx] = saved;
+    setDirty(true);
+    renderTable();
+    showBanner(
+      "warning",
+      `Record <strong>${escHtml(id)}</strong> marked as <strong>Inactive</strong>. Click <strong>Publish Updates</strong> to persist the sunset change.`
+    );
+  } catch (e) {
+    showBanner("danger", "Sunset failed: " + e.message);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Publish
@@ -186,6 +543,9 @@ document.getElementById("publishBtn").addEventListener("click", async () => {
   try {
     const result = await api("POST", "/api/publish");
     if (result.success) {
+      undoStack = [];
+      setDirty(false);
+      renderUndoState();
       showBanner("success",
         `<i class="bi bi-cloud-check-fill me-1"></i>
          <strong>Published successfully.</strong>
@@ -209,6 +569,129 @@ document.getElementById("publishBtn").addEventListener("click", async () => {
 // Add row shortcut
 // ---------------------------------------------------------------------------
 document.getElementById("addRowBtn").addEventListener("click", () => openEditModal(null));
+document.getElementById("undoChangeBtn").addEventListener("click", () => undoLastChange());
+document.getElementById("publishStageBtn").addEventListener("click", () => {
+  document.getElementById("publishBtn").click();
+});
+
+document.getElementById("exportCsvBtn").addEventListener("click", () => {
+  window.open("/api/records/export?format=csv", "_blank");
+});
+
+document.getElementById("exportXlsxBtn").addEventListener("click", () => {
+  window.open("/api/records/export?format=xlsx", "_blank");
+});
+
+document.querySelectorAll(".answer-format-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    applyAnswerFormatting(btn.dataset.format);
+  });
+});
+
+document.getElementById("recordSearchInput").addEventListener("input", event => {
+  recordSearch = event.target.value.trim().toLowerCase();
+  renderTable();
+});
+
+document.getElementById("statusFilter").addEventListener("change", event => {
+  statusFilter = event.target.value;
+  renderTable();
+});
+
+document.getElementById("clearFiltersBtn").addEventListener("click", () => {
+  recordSearch = "";
+  statusFilter = "All";
+  document.getElementById("recordSearchInput").value = "";
+  document.getElementById("statusFilter").value = "All";
+  renderTable();
+});
+
+document.getElementById("showNeedsReviewBtn").addEventListener("click", () => {
+  recordSearch = "";
+  statusFilter = "Draft";
+  document.getElementById("recordSearchInput").value = "";
+  document.getElementById("statusFilter").value = "Draft";
+  renderTable();
+});
+
+document.getElementById("bulkImportBtn").addEventListener("click", () => {
+  resetImportPreview();
+  bulkImportModal.show();
+});
+
+document.getElementById("previewImportBtn").addEventListener("click", async () => {
+  const fileInput = document.getElementById("bulkImportFile");
+  const file = fileInput.files && fileInput.files[0];
+  const status = document.getElementById("bulkImportStatus").value;
+  const contributor = document.getElementById("bulkImportContributor").value.trim();
+  const reviewer = document.getElementById("bulkImportReviewer").value.trim();
+  const tags = document.getElementById("bulkImportTags").value.trim();
+  const errDiv = document.getElementById("bulkImportErrors");
+
+  if (!file) {
+    errDiv.textContent = "Please choose a CSV or XLSX file.";
+    errDiv.classList.remove("d-none");
+    return;
+  }
+
+  if (!/\.(csv|xlsx)$/i.test(file.name)) {
+    errDiv.textContent = "Unsupported file type. Only CSV and XLSX are allowed.";
+    errDiv.classList.remove("d-none");
+    return;
+  }
+
+  errDiv.classList.add("d-none");
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("default_status", status);
+    formData.append("default_contributor", contributor);
+    formData.append("default_reviewer", reviewer);
+    formData.append("default_tags", tags);
+
+    const result = await api("POST", "/api/records/import-preview", formData);
+    importPreviewRecords = result.records || [];
+    renderImportPreview(result);
+  } catch (e) {
+    errDiv.textContent = "Preview failed: " + e.message;
+    errDiv.classList.remove("d-none");
+  }
+});
+
+document.getElementById("applyImportBtn").addEventListener("click", async () => {
+  if (!importPreviewRecords.length) return;
+
+  const btn = document.getElementById("applyImportBtn");
+  const errDiv = document.getElementById("bulkImportErrors");
+  btn.disabled = true;
+  errDiv.classList.add("d-none");
+
+  try {
+    const createdRecords = [];
+    for (const record of importPreviewRecords) {
+      createdRecords.push(await api("POST", "/api/records", record));
+    }
+    pushUndo({
+      type: "batch-create",
+      ids: createdRecords.map(record => record.id),
+      items: createdRecords.map(record => ({ id: record.id, question: record.canonical_question || "" })),
+    });
+    records.push(...createdRecords);
+    setDirty(true);
+    renderTable();
+    bulkImportModal.hide();
+    showBanner(
+      "success",
+      `<strong>${createdRecords.length}</strong> parsed record(s) imported into memory. Click <strong>Publish Updates</strong> to persist them.`
+    );
+    resetImportPreview();
+  } catch (e) {
+    errDiv.textContent = "Import failed: " + e.message;
+    errDiv.classList.remove("d-none");
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Banner helper
@@ -223,6 +706,70 @@ function showBanner(type, html) {
       b.classList.add("d-none");
     }, 6000);
   }
+}
+
+function resetImportPreview() {
+  importPreviewRecords = [];
+  document.getElementById("bulkImportFile").value = "";
+  document.getElementById("bulkImportErrors").classList.add("d-none");
+  document.getElementById("bulkImportSummary").textContent = "No preview yet.";
+  document.getElementById("bulkImportPreview").innerHTML =
+    '<div class="text-muted">Parsed records will appear here after preview.</div>';
+  document.getElementById("applyImportBtn").disabled = true;
+}
+
+function renderImportPreview(result) {
+  const errors = result.errors || [];
+  const recordsToImport = result.records || [];
+  const preview = document.getElementById("bulkImportPreview");
+  const summary = document.getElementById("bulkImportSummary");
+  const applyBtn = document.getElementById("applyImportBtn");
+
+  summary.textContent =
+    `Parsed ${recordsToImport.length} record(s). ${errors.length} issue(s) detected.`;
+  applyBtn.disabled = recordsToImport.length === 0;
+
+  if (!recordsToImport.length) {
+    preview.innerHTML = '<div class="text-muted">No valid Q&A records were found in the uploaded file.</div>';
+    return;
+  }
+
+  const errorBlock = errors.length
+    ? `<div class="alert alert-warning small mb-3"><strong>Import issues:</strong><ul class="mb-0 mt-1">${errors.map(err => `<li>${escHtml(err)}</li>`).join("")}</ul></div>`
+    : "";
+
+  preview.innerHTML = errorBlock + recordsToImport.map((record, idx) => `
+    <div class="border rounded bg-white p-3 mb-3">
+      <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+        <strong>${idx + 1}. ${escHtml(record.canonical_question)}</strong>
+        <span class="badge bg-secondary">${escHtml(record.status)}</span>
+      </div>
+      <div class="text-muted small mb-2">${escHtml(record.contributor || "unassigned contributor")}</div>
+      <div class="import-answer-preview rendered-answer">${record.answer_html || escHtml(record.answer)}</div>
+    </div>
+  `).join("");
+}
+
+function applyAnswerFormatting(format) {
+  const textarea = document.getElementById("editAnswer");
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const before = textarea.value.slice(0, start);
+  const selected = textarea.value.slice(start, end);
+  const after = textarea.value.slice(end);
+
+  let replacement = selected;
+  if (format === "bold") {
+    replacement = `**${selected || "bold text"}**`;
+  } else if (format === "italic") {
+    replacement = `*${selected || "italic text"}*`;
+  } else if (format === "bullet") {
+    const lines = (selected || "list item").split("\n");
+    replacement = lines.map(line => line.startsWith("- ") ? line : `- ${line}`).join("\n");
+  }
+
+  textarea.value = before + replacement + after;
+  textarea.focus();
 }
 
 function escHtml(text) {

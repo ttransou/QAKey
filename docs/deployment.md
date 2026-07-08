@@ -101,15 +101,24 @@ server {
 
 ## Protecting the editor
 
-The `/editor` route should be accessible only to authorised maintainers.
-QAKey does not implement authentication itself — use one of the following approaches:
+The `/editor` route should be accessible only to authorized maintainers.
+
+QAKey now includes a built-in simple editor login gate.
+
+1. Set `editor.require_auth: true` in `config.yaml`.
+2. Provide credentials in one of these ways:
+    - `editor.admin_username` and `editor.admin_password` in config
+    - `QAKEY_EDITOR_USERNAME` and `QAKEY_EDITOR_PASSWORD` environment variables (recommended)
+3. Set `QAKEY_SECRET_KEY` in production to protect session signing.
+
+For organizational security requirements, keep the built-in gate as a baseline and layer enterprise auth in front of the app:
 
 - **Basic Auth via nginx** — add `auth_basic` directives to the `/editor` location block.
 - **OAuth proxy** (e.g. oauth2-proxy) — place in front of the application.
 - **Azure AD / Entra ID** — configure App Service Authentication.
 - **Network restriction** — restrict access to `/editor` by IP range at the proxy or firewall level.
 
-Set `editor.require_auth: true` in `config.yaml` as a documentation flag indicating that authentication is expected. QAKey itself does not enforce it.
+This gives teams a simple start and a clear path to stronger auth boundaries.
 
 ---
 

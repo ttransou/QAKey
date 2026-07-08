@@ -5,6 +5,7 @@ Purpose: track follow-up documentation work that should live outside the README.
 ## Documentation roadmap
 
 - [ ] Keep README focused as an entry point (purpose, quick start, fit, links out)
+- [x] Add `docs/source-of-truth-framework.md` for maintainer operating model
 - [ ] Add `docs/use-cases.md` for audience-specific scenarios
 - [ ] Add `docs/operational-playbook.md` for day-to-day maintenance and governance
 - [ ] Add links to new docs from README "Documentation" section
@@ -36,3 +37,5 @@ Purpose: track follow-up documentation work that should live outside the README.
 - [ ] Add a simple docs index page under `docs/`
 - [ ] Add screenshots/GIFs for editor workflows
 - [ ] Add a 30-day rollout checklist for new teams
+- [ ] Enforce editor auth hardening (session policy, CSRF, rate limits)
+- [ ] Add CSV/XLSX import template download files for maintainers

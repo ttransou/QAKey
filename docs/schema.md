@@ -96,10 +96,15 @@ synonyms:
 ### Option A — Content Editor (recommended for non-technical maintainers)
 
 1. Open `http://your-server/editor`.
-2. Click **New Record** to add a Q&A pair, or click the edit icon on any existing row.
-3. Fill in the fields in the modal dialog.
-4. Set status to **Active** when the record is ready.
-5. Click **Publish Updates** to validate, save, and rebuild the index.
+2. If editor auth is enabled, sign in with admin credentials.
+3. Click **New Record** to add a Q&A pair, or click the edit icon on any existing row.
+4. Fill in the fields in the modal dialog.
+5. Optional: import multiple records from CSV/XLSX using **Import CSV/XLSX** and preview results before applying.
+6. Set status to **Active** when the record is ready.
+7. Review the Publishing Stage panel (staged IDs and action types).
+8. Click **Publish Updates** to validate, save, and rebuild the index.
+
+Optional: use CSV/XLSX export controls to capture audit snapshots of the current record set.
 
 ### Option B — Direct YAML edit (for technical maintainers)
 

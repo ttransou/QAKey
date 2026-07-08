@@ -14,9 +14,65 @@ main {
   flex: 1;
 }
 
+.front-user-side-badge {
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+.front-layout {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.front-side-panel {
+  position: sticky;
+  top: 1rem;
+  border: 1px solid #dde5ef;
+  border-radius: 1rem;
+  background: #fff;
+  padding: 1rem;
+  box-shadow: 0 8px 30px rgba(16, 24, 40, 0.05);
+}
+
+.front-duck {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.front-brief-instructions {
+  display: inline-grid;
+  gap: 0.15rem;
+}
+
+.front-ai-note {
+  border-left: 0.35rem solid var(--qakey-primary);
+}
+
+[data-bs-theme="dark"] .front-side-panel {
+  background: #111418;
+  border-color: #2a2f38;
+  box-shadow: none;
+}
+
+@media (max-width: 991.98px) {
+  .front-side-panel {
+    position: static;
+  }
+}
+
 /* -----------------------------------------------------------------------
    Query interface
    ----------------------------------------------------------------------- */
+
+.theme-mode-btn.active {
+  background-color: var(--qakey-primary);
+  color: #fff;
+  border-color: var(--qakey-primary);
+}
+
+.alert-info {
+  background-color: rgba(13, 110, 253, 0.08);
+}
 
 #questionInput:focus {
   box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
@@ -25,6 +81,52 @@ main {
 #answerText {
   white-space: pre-wrap;
   line-height: 1.7;
+}
+
+.rendered-answer {
+  line-height: 1.7;
+}
+
+.rendered-answer p:last-child {
+  margin-bottom: 0;
+}
+
+.rendered-answer ul,
+.rendered-answer ol {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.rendered-answer table {
+  width: 100%;
+  margin: 0.75rem 0;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.rendered-answer th,
+.rendered-answer td {
+  border: 1px solid #d0d7de;
+  padding: 0.5rem 0.65rem;
+  vertical-align: top;
+}
+
+.rendered-answer thead th {
+  background-color: #f8f9fa;
+}
+
+.rendered-answer code {
+  background-color: #f3f5f7;
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.3rem;
+}
+
+.rendered-answer pre {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  overflow-x: auto;
 }
 
 #historyList .list-group-item {

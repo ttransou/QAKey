@@ -2,11 +2,12 @@
 
 ## Overview
 
-QAKey is structured as three loosely coupled layers:
+QAKey is structured as four loosely coupled layers:
 
 1. **Data layer** (`qakey/store.py`, `qakey/models.py`) — reads, writes, and validates records
-2. **Engine layer** (`qakey/engine.py`) — builds a search index and matches queries
-3. **Application layer** (`app.py`, templates, static) — exposes the UI and REST API
+2. **Ingest layer** (`qakey/ingest.py`) — deterministically extracts, chunks, and parses raw source text
+3. **Engine layer** (`qakey/engine.py`) — builds a search index and matches queries
+4. **Application layer** (`app.py`, templates, static) — exposes the UI and REST API
 
 ---
 
@@ -42,6 +43,36 @@ Each knowledge-base entry is a `QARecord` dataclass with these fields:
 - `publish()` — validates all records, saves to YAML, and returns results
 
 Changes made through CRUD methods are held **in memory** until `publish()` is called. This allows maintainers to make multiple edits and preview them before committing.
+
+---
+
+## Ingest layer
+
+### `qakey.ingest`
+
+The ingest helpers support bulk import of user-provided source text without introducing generation.
+
+**Operational flow**
+
+1. **Extract** — normalize pasted text into consistent newline-delimited blocks.
+2. **Chunk** — group adjacent blocks into stable chunks up to a fixed character budget.
+3. **Deterministically retrieve** — for each question-shaped block, retrieve the answer from the same block or the immediately following non-question blocks.
+4. **Parse** — emit candidate Q&A records only when the structure is explicit enough to be trusted.
+
+**Accepted deterministic patterns**
+
+- `Question: ...` followed by `Answer: ...`
+- `Q: ...` followed by `A: ...`
+- A single-line question ending in `?` followed by answer text in the same block or the next block
+
+Free-form prose that does not expose a deterministic question-answer structure is ignored during import preview.
+
+**Primary helpers**
+
+- `extract_blocks(raw_text)` — split source text into paragraph-like blocks
+- `chunk_text(raw_text, max_chars=650)` — group blocks into stable import chunks
+- `parse_chunks(chunks)` — convert chunks into parsed Q&A candidates
+- `build_records_from_text(...)` — produce draft `QARecord` objects with supplied metadata
 
 ---
 
@@ -88,20 +119,32 @@ Called automatically after a successful publish. Reinitialises the index with th
 | Route | Handler | Notes |
 |---|---|---|
 | `GET /` | `index()` | Renders `templates/index.html` |
+| `GET/POST /editor/login` | `editor_login()` | Optional editor auth entry-point |
+| `POST /editor/logout` | `editor_logout()` | Ends editor auth session |
 | `GET /editor` | `editor()` | Renders `templates/editor.html` |
 | `POST /api/query` | `api_query()` | `{"question": "..."}` → `MatchResult` |
 | `GET /api/records` | `api_list_records()` | Returns all records as JSON |
 | `POST /api/records` | `api_create_record()` | Creates a record in memory |
 | `PUT /api/records/<id>` | `api_update_record()` | Updates a record in memory |
 | `DELETE /api/records/<id>` | `api_delete_record()` | Deletes a record from memory |
+| `POST /api/records/import-preview` | `api_import_preview()` | Parses CSV/XLSX records for preview before import |
+| `GET /api/records/export?format=csv|xlsx` | `api_records_export()` | Exports records for audit and archiving |
+| `POST /api/ingest/preview` | `api_ingest_preview()` | Extracts, chunks, and parses pasted source text into preview records |
 | `POST /api/publish` | `api_publish()` | Validates, saves, rebuilds index |
 | `GET /api/health` | `api_health()` | Health check |
 
 ### Frontend
 
-The query interface (`static/js/app.js`) sends POST requests to `/api/query` and renders the result. A session history of recent queries is maintained in memory.
+The query interface (`static/js/app.js`) sends POST requests to `/api/query` and renders the result. A session history of recent queries is maintained in memory. The front page includes user-side-only messaging and a light/dark/system mode toggle.
 
-The editor (`static/js/editor.js`) loads all records on page load and manages them through the REST API. Add, edit, and delete operations update memory immediately; changes are reflected in the table. The **Publish Updates** button calls `/api/publish`.
+The editor (`static/js/editor.js`) loads all records on page load and manages them through the REST API. Add, edit, delete, sunset, and import operations update in-memory staged changes immediately; changes are reflected in the table and in the Publishing Stage panel. The editor supports:
+
+- CSV/XLSX import preview before record creation
+- CSV/XLSX export for audit and record keeping
+- Undo-last-change for staged unpublished operations
+- ID-level publishing-stage visibility before commit
+
+The **Publish Updates** and **Publish Staged Changes** actions call `/api/publish`.
 
 ---
 

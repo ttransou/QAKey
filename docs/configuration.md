@@ -82,11 +82,20 @@ matching:
 ```yaml
 editor:
   require_auth: false
+  admin_username: "admin"
+  admin_password: ""
 ```
 
 | Key | Default | Description |
 |---|---|---|
-| `require_auth` | `false` | When `true`, the application expects your auth middleware to protect the `/editor` route before the request reaches Flask. QAKey does not implement authentication itself. |
+| `require_auth` | `false` | When `true`, the built-in editor login gate is enabled for `/editor` and editor APIs. |
+| `admin_username` | `admin` | Local editor admin username (override with environment variable in real deployments). |
+| `admin_password` | empty | Local editor admin password (must be set when auth is enabled). |
+
+### Editor auth model
+
+QAKey includes a simple built-in admin/password gate for editor access.
+This model is intentionally minimal and can be replaced with enterprise auth layers (SSO, AD, OAuth proxy) when needed.
 
 ---
 
@@ -99,3 +108,11 @@ QAKEY_CONFIG=/etc/qakey/prod.yaml python app.py
 ```
 
 This is useful for managing separate configurations for development, staging, and production environments.
+
+Additional environment overrides:
+
+| Variable | Description |
+|---|---|
+| `QAKEY_EDITOR_USERNAME` | Overrides `editor.admin_username` |
+| `QAKEY_EDITOR_PASSWORD` | Overrides `editor.admin_password` |
+| `QAKEY_SECRET_KEY` | Session signing key for editor login session cookies |

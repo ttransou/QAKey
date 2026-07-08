@@ -101,13 +101,25 @@ QAKey can be a practical "trusted answer layer" inside a broader knowledge archi
 |---|---|
 | **Natural-language input** | Intent classification, synonym normalization, semantic matching, and confidence scoring |
 | **Deterministic output** | Approved answers are returned verbatim — no generation, no hallucination |
-| **Spreadsheet-like editor** | Non-technical maintainers can add, edit, and publish records in a web UI |
-| **Publish workflow** | Validates records, persists to YAML, and rebuilds the index in one click |
+| **User-facing front page** | Dedicated user-side query UI with light/dark/system mode controls and explicit AI usage messaging |
+| **Spreadsheet-like editor** | Non-technical maintainers can add, edit, inspect, and sunset records in a web UI |
+| **Staged publish workflow** | Tracks unpublished changes, supports undo, and publishes validated updates in one action |
 | **Status management** | Draft → Active → Inactive lifecycle for every record |
 | **Audit fields** | Contributor, reviewer, version, created/updated timestamps — all automatic |
+| **Import and export** | CSV/XLSX import preview and CSV/XLSX export for audit and record keeping |
+| **Editor access boundary** | Optional admin/password gate for `/editor`, extensible to enterprise auth layers |
 | **Synonym support** | Domain-specific terms and abbreviations handled transparently |
 | **REST API** | All operations available as JSON endpoints |
 | **Deployment-agnostic** | Web UI, API, chatbot integration, or embedded widget |
+
+---
+
+## Source-of-Truth Framework
+
+QAKey is built around a spreadsheet-like editing model for maintainers who should not need coding, repository, or YAML knowledge.
+They manage the approved question, answer, status, and review ownership, while QAKey handles identifiers, timestamps, validation, versioning, persistence, and index rebuilds automatically.
+
+See [docs/source-of-truth-framework.md](docs/source-of-truth-framework.md) for the full framework and maintainer workflow.
 
 ---
 
@@ -158,6 +170,13 @@ and other options.
 python app.py
 ```
 
+Optional editor auth setup:
+
+```bash
+export QAKEY_EDITOR_USERNAME="admin"
+export QAKEY_EDITOR_PASSWORD="change-me"
+```
+
 Open **http://127.0.0.1:5000** to ask questions and
 **http://127.0.0.1:5000/editor** to manage the knowledge base.
 
@@ -173,7 +192,9 @@ QAKey/
 │
 ├── qakey/                  Core Python package
 │   ├── engine.py           NLP matching engine (TF-IDF, synonyms, confidence)
+│   ├── ingest.py           Deterministic source text parsing helpers
 │   ├── models.py           QARecord data model with validation
+│   ├── rendering.py        Safe answer rendering helpers (markdown + sanitization)
 │   └── store.py            YAML-backed data store with publish workflow
 │
 ├── knowledge/              Knowledge base (replace with your content)
@@ -182,6 +203,7 @@ QAKey/
 │
 ├── templates/
 │   ├── base.html           Shared layout
+│   ├── editor_login.html   Optional editor auth login page
 │   ├── index.html          Query interface (end-user)
 │   └── editor.html         Content editor (maintainer)
 │
@@ -193,7 +215,10 @@ QAKey/
 │
 ├── tests/
 │   ├── conftest.py         Shared fixtures
+│   ├── test_app_rendering.py
 │   ├── test_engine.py      Engine and NLP unit + integration tests
+│   ├── test_ingest.py
+│   ├── test_rendering.py
 │   └── test_store.py       Store and model tests
 │
 └── docs/
@@ -221,9 +246,13 @@ Maintainers manage the knowledge base in a spreadsheet-like table without touchi
 YAML or code:
 
 1. **Add** a new record with canonical question, alternates, answer, and status.
-2. **Edit** any field in a modal dialog.
-3. **Delete** records.
-4. Click **Publish Updates** to validate all records, save to YAML, and rebuild the index.
+2. **Edit/Inspect** fields and metadata (including contributor/reviewer ownership).
+3. **Import** records from CSV/XLSX with preview and defaults.
+4. **Export** records to CSV/XLSX for auditing.
+5. **Stage** unpublished changes with explicit publish summary and ID-level entries.
+6. Click **Publish Updates** to validate all records, save to YAML, and rebuild the index.
+
+When `editor.require_auth` is enabled, `/editor` is protected by a built-in admin/password login. This simple model can be replaced by organization auth later.
 
 ### REST API
 
@@ -235,6 +264,9 @@ YAML or code:
 | `POST` | `/api/records` | Create a record |
 | `PUT` | `/api/records/<id>` | Update a record |
 | `DELETE` | `/api/records/<id>` | Delete a record |
+| `POST` | `/api/records/import-preview` | Preview records parsed from CSV/XLSX |
+| `GET` | `/api/records/export?format=csv|xlsx` | Export records for audit/archival |
+| `POST` | `/api/ingest/preview` | Preview deterministic raw text parsing |
 | `POST` | `/api/publish` | Validate, persist, and rebuild index |
 
 ---
@@ -259,15 +291,14 @@ Scores range from 0 to 1. The threshold is configurable in `config.yaml`.
 python -m pytest tests/ -v
 ```
 
----
-
 ## Documentation
 
-- [Implementation guide](docs/implementation.md)
-- [Configuration reference](docs/configuration.md)
-- [Knowledge base schema](docs/schema.md)
-- [Deployment options](docs/deployment.md)
-- [Contributing guide](docs/contributing.md)
+- [docs/source-of-truth-framework.md](docs/source-of-truth-framework.md) — maintainer operating model and publish workflow
+- [docs/implementation.md](docs/implementation.md) — architecture, routes, and UI behavior
+- [docs/configuration.md](docs/configuration.md) — configuration and environment variables
+- [docs/schema.md](docs/schema.md) — knowledge record schema and lifecycle semantics
+- [docs/deployment.md](docs/deployment.md) — runtime/deployment guidance and editor security boundary
+- [docs/contributing.md](docs/contributing.md) — content and code contribution workflow
 
 ---
 

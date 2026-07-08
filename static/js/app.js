@@ -44,7 +44,7 @@ async function askQuestion(question) {
       confidenceBadge.className   = `badge bg-white ms-auto ${confidenceClass(data.confidence)}`;
 
       canonicalQ.textContent = data.canonical_question;
-      answerText.textContent = data.answer;
+      answerText.innerHTML = data.answer_html || escapeHtml(data.answer);
 
       matchedCard.classList.remove("d-none");
       noMatchCard.classList.add("d-none");

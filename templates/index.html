@@ -3,15 +3,49 @@
 {% block title %}{{ config.app_name }} — Ask a Question{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-lg-8 col-xl-7">
+<div class="row g-4 align-items-start front-layout">
+  <div class="col-lg-4 col-xl-3">
+    <aside class="front-side-panel">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <span class="badge rounded-pill text-bg-warning front-user-side-badge px-3 py-2">USER SIDE ONLY</span>
+      </div>
 
-    <!-- Hero -->
-    <div class="text-center mb-5">
-      <h1 class="display-6 fw-bold text-primary">
+      <div class="front-duck mb-2" aria-hidden="true">🦆</div>
+      <h1 class="h3 fw-bold text-primary mb-1">
         <i class="bi bi-key-fill me-2"></i>{{ config.app_name }}
       </h1>
-      <p class="lead text-muted">{{ config.app_tagline }}</p>
+      <p class="text-muted mb-3">{{ config.app_tagline }}</p>
+
+      <div class="mb-3">
+        <div class="small fw-semibold text-uppercase text-muted mb-2">Theme Mode</div>
+        <div class="btn-group btn-group-sm" role="group" aria-label="Theme mode">
+          <button type="button" class="btn btn-outline-secondary theme-mode-btn" data-theme-mode="light">Light</button>
+          <button type="button" class="btn btn-outline-secondary theme-mode-btn" data-theme-mode="dark">Dark</button>
+          <button type="button" class="btn btn-outline-secondary theme-mode-btn" data-theme-mode="system">System</button>
+        </div>
+      </div>
+
+      <div class="small text-muted front-brief-instructions mb-3">
+        <div><strong>1.</strong> Ask one policy or process question.</div>
+        <div><strong>2.</strong> Review the approved answer returned.</div>
+        <div><strong>3.</strong> If no match appears, contact your team directly.</div>
+      </div>
+
+      <div class="alert alert-info border-0 shadow-sm mb-3 front-ai-note" role="note">
+        <div class="fw-semibold mb-1">AI usage</div>
+        <div class="small mb-1">QAKey uses deterministic AI-assisted matching to find the closest approved record.</div>
+        <div class="small mb-0">It does not generate new policy answers.</div>
+      </div>
+
+      <p class="small mb-0 text-muted">Maintainer workspace is separate at <code>/editor</code>.</p>
+    </aside>
+  </div>
+
+  <div class="col-lg-8 col-xl-9">
+    <!-- Hero -->
+    <div class="mb-4">
+      <h2 class="h4 fw-semibold mb-1">Ask A Question</h2>
+      <p class="small text-muted mb-0">Answers are returned from your organization’s maintained source-of-truth content.</p>
     </div>
 
     <!-- Query form -->
@@ -46,7 +80,7 @@
         </div>
         <div class="card-body">
           <h6 class="card-subtitle text-muted mb-2" id="canonicalQuestion"></h6>
-          <p class="card-text fs-5" id="answerText"></p>
+          <div class="card-text fs-5 rendered-answer" id="answerText"></div>
         </div>
       </div>
 
@@ -76,6 +110,50 @@
 {% block scripts %}
 <script>
   const NO_MATCH_MESSAGE = {{ config.matching.no_match_message | tojson }};
+
+  (function setupThemeMode() {
+    const key = "qakey-theme-mode";
+    const root = document.documentElement;
+    const buttons = Array.from(document.querySelectorAll(".theme-mode-btn"));
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+
+    function resolveTheme(mode) {
+      if (mode === "system") {
+        return media.matches ? "dark" : "light";
+      }
+      return mode;
+    }
+
+    function applyTheme(mode) {
+      root.setAttribute("data-bs-theme", resolveTheme(mode));
+      buttons.forEach(btn => {
+        const active = btn.dataset.themeMode === mode;
+        btn.classList.toggle("active", active);
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+    }
+
+    const savedMode = localStorage.getItem(key);
+    const mode = savedMode === "light" || savedMode === "dark" || savedMode === "system"
+      ? savedMode
+      : "system";
+
+    applyTheme(mode);
+
+    buttons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const selected = btn.dataset.themeMode;
+        localStorage.setItem(key, selected);
+        applyTheme(selected);
+      });
+    });
+
+    media.addEventListener("change", () => {
+      if ((localStorage.getItem(key) || "system") === "system") {
+        applyTheme("system");
+      }
+    });
+  })();
 </script>
 <script src="/static/js/app.js"></script>
 {% endblock %}

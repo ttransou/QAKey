@@ -44,3 +44,8 @@ editor:
   # Set to true to require authentication before accessing /editor.
   # Wire up your own auth middleware when enabling this.
   require_auth: false
+
+  # Simple local admin credentials for the editor login page.
+  # Prefer QAKEY_EDITOR_USERNAME and QAKEY_EDITOR_PASSWORD in real deployments.
+  admin_username: "admin"
+  admin_password: ""

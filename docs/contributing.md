@@ -13,6 +13,7 @@ your organization. You do not need coding or repository knowledge.
 ### Using the Content Editor (recommended)
 
 1. Open `/editor` in your browser.
+   - If editor auth is enabled, sign in with admin credentials first.
 2. Click **New Record** and fill in the fields:
    - **Canonical Question** — the authoritative, single-best phrasing.
    - **Alternate Phrasings** — other ways users might ask the same thing (one per line).
@@ -20,15 +21,21 @@ your organization. You do not need coding or repository knowledge.
    - **Status** — set to `Draft` while the record is in review.
    - **Contributor** — your name or email.
 3. Click **Save Record**.
-4. Ask a reviewer to open the editor, verify the record, add their name as Reviewer, and change the status to `Active`.
-5. The reviewer clicks **Publish Updates** to make the answer live.
+4. Use **Import CSV/XLSX** when you need to add multiple records from spreadsheet-format source files.
+5. Use the **Publishing stage** panel to review staged unpublished changes (including record IDs) before commit.
+6. Ask a reviewer to open the editor, verify the record, add their name as Reviewer, and change the status to `Active`.
+7. The reviewer clicks **Publish Updates** (or **Publish Staged Changes**) to make approved answers live.
+
+### Optional export for audit and record keeping
+
+Use the CSV/XLSX export controls in the editor toolbar to capture a snapshot of current records for archival, review, or offline auditing.
 
 ### Directly editing YAML
 
-For bulk imports or migration from an existing FAQ:
+For migration from an existing FAQ or scripted ingestion:
 
 1. Edit `knowledge/qa_records.yaml` following the schema in [docs/schema.md](schema.md).
-2. Do not set `id`, `created_at`, `updated_at`, or `version` — leave them blank or omit them; QAKey assigns these automatically on the next Publish.
+2. Do not set `id`, `created_at`, `updated_at`, or `version` unless you explicitly need to preserve historical values.
 3. Commit your changes and trigger a restart or call `POST /api/publish`.
 
 ---
