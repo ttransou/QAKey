@@ -144,7 +144,18 @@ The editor (`static/js/editor.js`) loads all records on page load and manages th
 - Undo-last-change for staged unpublished operations
 - ID-level publishing-stage visibility before commit
 
+Editor-first note: the normal ingestion path is direct record maintenance in the Content Editor. CSV/XLSX import is supported as a secondary accelerator for bulk onboarding or migration.
+
 The **Publish Updates** and **Publish Staged Changes** actions call `/api/publish`.
+
+---
+
+## Workflow test coverage
+
+QAKey includes explicit workflow tests for end-to-end behavior:
+
+- `tests/test_editor_query_workflow.py` simulates add/edit/refine/deactivate in editor APIs and verifies user-side query behavior before and after publish.
+- `tests/test_import_preview_workflow.py` validates spreadsheet import preview behavior against a real XLSX fixture.
 
 ---
 

@@ -21,7 +21,7 @@ your organization. You do not need coding or repository knowledge.
    - **Status** — set to `Draft` while the record is in review.
    - **Contributor** — your name or email.
 3. Click **Save Record**.
-4. Use **Import CSV/XLSX** when you need to add multiple records from spreadsheet-format source files.
+4. Use **Import CSV/XLSX** only when you need a bulk onboarding accelerator from spreadsheet-format source files.
 5. Use the **Publishing stage** panel to review staged unpublished changes (including record IDs) before commit.
 6. Ask a reviewer to open the editor, verify the record, add their name as Reviewer, and change the status to `Active`.
 7. The reviewer clicks **Publish Updates** (or **Publish Staged Changes**) to make approved answers live.
@@ -59,6 +59,13 @@ pip install -r requirements.txt
 
 ```bash
 python -m pytest tests/ -v
+```
+
+Focused workflow tests:
+
+```bash
+python -m pytest -q tests/test_editor_query_workflow.py
+python -m pytest -q tests/test_import_preview_workflow.py
 ```
 
 All tests must pass before submitting a pull request.

@@ -100,6 +100,10 @@ def _split_multi_value(text: str) -> list[str]:
     return [part.strip() for part in raw.split("\n") if part.strip()]
 
 
+def _normalize_field_name(name: str) -> str:
+    return str(name).strip().lower().replace(" ", "_").replace("-", "_")
+
+
 def _parse_records_from_csv(raw: bytes, defaults: dict) -> tuple[list[dict], list[str]]:
     rows: list[dict] = []
     errors: list[str] = []
@@ -109,11 +113,11 @@ def _parse_records_from_csv(raw: bytes, defaults: dict) -> tuple[list[dict], lis
     if not reader.fieldnames:
         return [], ["Missing header row in CSV file"]
 
-    field_map = {name.lower().strip(): name for name in reader.fieldnames}
+    field_map = {_normalize_field_name(name): name for name in reader.fieldnames}
 
     def get_value(row: dict, *keys: str) -> str:
         for key in keys:
-            source = field_map.get(key)
+            source = field_map.get(_normalize_field_name(key))
             if source and row.get(source) is not None:
                 return str(row.get(source)).strip()
         return ""
@@ -155,11 +159,11 @@ def _parse_records_from_xlsx(raw: bytes, defaults: dict) -> tuple[list[dict], li
         return [], ["Workbook is empty"]
 
     headers = [str(cell).strip() if cell is not None else "" for cell in data_rows[0]]
-    header_map = {header.lower(): idx for idx, header in enumerate(headers) if header}
+    header_map = {_normalize_field_name(header): idx for idx, header in enumerate(headers) if header}
 
     def cell_value(row: tuple, *keys: str) -> str:
         for key in keys:
-            idx = header_map.get(key)
+            idx = header_map.get(_normalize_field_name(key))
             if idx is not None and idx < len(row) and row[idx] is not None:
                 return str(row[idx]).strip()
         return ""

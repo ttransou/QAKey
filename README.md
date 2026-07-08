@@ -247,7 +247,7 @@ YAML or code:
 
 1. **Add** a new record with canonical question, alternates, answer, and status.
 2. **Edit/Inspect** fields and metadata (including contributor/reviewer ownership).
-3. **Import** records from CSV/XLSX with preview and defaults.
+3. **Import** records from CSV/XLSX with preview and defaults (optional accelerator, not the primary path).
 4. **Export** records to CSV/XLSX for auditing.
 5. **Stage** unpublished changes with explicit publish summary and ID-level entries.
 6. Click **Publish Updates** to validate all records, save to YAML, and rebuild the index.
@@ -290,6 +290,11 @@ Scores range from 0 to 1. The threshold is configurable in `config.yaml`.
 ```bash
 python -m pytest tests/ -v
 ```
+
+Workflow-focused tests:
+
+- `tests/test_editor_query_workflow.py` validates the editor lifecycle (add/edit/refine/status changes) and user query behavior before/after publish.
+- `tests/test_import_preview_workflow.py` validates XLSX import preview using a fixture in `tests/fixtures/`.
 
 ## Documentation
 
