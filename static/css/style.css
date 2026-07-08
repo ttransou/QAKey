@@ -1,0 +1,59 @@
+/* QAKey — global styles */
+
+:root {
+  --qakey-primary: #0d6efd;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+/* -----------------------------------------------------------------------
+   Query interface
+   ----------------------------------------------------------------------- */
+
+#questionInput:focus {
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+#answerText {
+  white-space: pre-wrap;
+  line-height: 1.7;
+}
+
+#historyList .list-group-item {
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: border-color 0.15s;
+}
+
+#historyList .list-group-item:hover {
+  border-left-color: var(--qakey-primary);
+  background-color: #f8f9ff;
+}
+
+/* -----------------------------------------------------------------------
+   Content editor
+   ----------------------------------------------------------------------- */
+
+#recordsTable tbody tr:hover {
+  background-color: #f0f4ff;
+}
+
+.truncate {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Confidence badge */
+.confidence-high   { background-color: #198754 !important; }
+.confidence-medium { background-color: #ffc107 !important; color: #000 !important; }
+.confidence-low    { background-color: #dc3545 !important; }

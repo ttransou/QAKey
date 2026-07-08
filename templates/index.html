@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}{{ config.app_name }} — Ask a Question{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-xl-7">
+
+    <!-- Hero -->
+    <div class="text-center mb-5">
+      <h1 class="display-6 fw-bold text-primary">
+        <i class="bi bi-key-fill me-2"></i>{{ config.app_name }}
+      </h1>
+      <p class="lead text-muted">{{ config.app_tagline }}</p>
+    </div>
+
+    <!-- Query form -->
+    <div class="card shadow-sm mb-4">
+      <div class="card-body p-4">
+        <label for="questionInput" class="form-label fw-semibold">
+          Ask a question
+        </label>
+        <div class="input-group">
+          <input type="text" id="questionInput" class="form-control form-control-lg"
+                 placeholder="e.g. What are your business hours?"
+                 autocomplete="off" autofocus />
+          <button id="askBtn" class="btn btn-primary btn-lg px-4" type="button">
+            <i class="bi bi-search me-1"></i>Ask
+          </button>
+        </div>
+        <div class="form-text">
+          Type your question naturally — QAKey will match it to an approved answer.
+        </div>
+      </div>
+    </div>
+
+    <!-- Answer panel (hidden until a result arrives) -->
+    <div id="resultPanel" class="d-none">
+
+      <!-- Matched answer -->
+      <div id="matchedCard" class="card border-success shadow-sm mb-3 d-none">
+        <div class="card-header bg-success text-white d-flex align-items-center gap-2">
+          <i class="bi bi-check-circle-fill"></i>
+          <strong>Answer found</strong>
+          <span id="confidenceBadge" class="badge bg-white text-success ms-auto"></span>
+        </div>
+        <div class="card-body">
+          <h6 class="card-subtitle text-muted mb-2" id="canonicalQuestion"></h6>
+          <p class="card-text fs-5" id="answerText"></p>
+        </div>
+      </div>
+
+      <!-- No match -->
+      <div id="noMatchCard" class="card border-warning shadow-sm mb-3 d-none">
+        <div class="card-header bg-warning text-dark d-flex align-items-center gap-2">
+          <i class="bi bi-exclamation-circle-fill"></i>
+          <strong>No answer found</strong>
+        </div>
+        <div class="card-body">
+          <p class="card-text text-muted" id="noMatchMessage"></p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Recent queries list -->
+    <div id="historySection" class="d-none mt-4">
+      <h6 class="text-muted">Recent questions this session</h6>
+      <ul id="historyList" class="list-group list-group-flush small"></ul>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const NO_MATCH_MESSAGE = {{ config.matching.no_match_message | tojson }};
+</script>
+<script src="/static/js/app.js"></script>
+{% endblock %}

@@ -1,0 +1,46 @@
+# QAKey — Application Configuration
+#
+# Copy this file to configure your deployment.
+# Environment variable QAKEY_CONFIG can point to an alternate config path.
+
+# ------------------------------------------------------------------
+# Application identity
+# ------------------------------------------------------------------
+app_name: "QAKey"
+app_tagline: "Your organization's trusted Q&A knowledge base"
+
+# ------------------------------------------------------------------
+# Server
+# ------------------------------------------------------------------
+host: "127.0.0.1"
+port: 5000
+debug: false
+
+# ------------------------------------------------------------------
+# Knowledge base
+# ------------------------------------------------------------------
+knowledge:
+  records_path: "knowledge/qa_records.yaml"
+  synonyms_path: "knowledge/synonyms.yaml"
+
+# ------------------------------------------------------------------
+# Matching engine
+# ------------------------------------------------------------------
+matching:
+  # Minimum cosine-similarity score (0–1) required to return an answer.
+  # Lower values → more permissive matches (more false positives).
+  # Higher values → stricter matches (more "no match" responses).
+  confidence_threshold: 0.25
+
+  # Message shown when no record meets the threshold.
+  no_match_message: >
+    I could not find an approved answer for that question.
+    Please rephrase your question or contact the team directly.
+
+# ------------------------------------------------------------------
+# Editor
+# ------------------------------------------------------------------
+editor:
+  # Set to true to require authentication before accessing /editor.
+  # Wire up your own auth middleware when enabling this.
+  require_auth: false

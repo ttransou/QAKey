@@ -1,0 +1,110 @@
+# QAKey Synonym Mappings
+#
+# Map domain-specific terms, abbreviations, and informal phrasings to a
+# canonical (stemmed) token so the matching engine treats them as equivalent.
+#
+# Format:
+#   synonyms:
+#     <canonical_token>:
+#       - <synonym_1>
+#       - <synonym_2>
+#
+# Tips:
+#   - Use lowercase for all tokens.
+#   - The canonical token is the key; list its alternate forms as values.
+#   - Add organisation-specific jargon, product names, acronyms, etc.
+#   - Synonyms are processed through the same stemmer as all other text,
+#     so minor inflection variants are handled automatically.
+
+synonyms:
+  # Time / availability
+  hour:
+    - schedule
+    - timing
+    - open
+    - available
+    - operating
+
+  # Leave / vacation
+  vacation:
+    - pto
+    - leave
+    - holiday
+    - time-off
+    - annual-leave
+    - day-off
+
+  # Human resources
+  employ:
+    - staff
+    - worker
+    - personnel
+    - team-member
+    - colleague
+    - headcount
+
+  # Benefits / compensation
+  benefit:
+    - perk
+    - compensation
+    - package
+    - coverage
+    - entitlement
+
+  # Policies / documentation
+  polic:
+    - rule
+    - guideline
+    - procedure
+    - regulation
+    - requirement
+    - standard
+
+  # IT / technical
+  password:
+    - credential
+    - login
+    - access
+    - authentication
+    - passcode
+
+  support:
+    - helpdesk
+    - assistance
+    - ticket
+    - issue
+    - request
+    - problem
+
+  # Finance / expenses
+  expens:
+    - receipt
+    - claim
+    - reimburs
+    - invoice
+    - cost
+    - charge
+
+  # Documents / information
+  handbook:
+    - manual
+    - guide
+    - document
+    - documentation
+    - resource
+
+  # Remote work
+  remot:
+    - wfh
+    - telecommut
+    - work-from-home
+    - hybrid
+    - offsite
+
+  # Health
+  health:
+    - medical
+    - dental
+    - vision
+    - insurance
+    - wellbeing
