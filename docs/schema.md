@@ -47,18 +47,16 @@ records:
 
 ## Status lifecycle
 
-```
- ┌───────┐    review     ┌────────┐    retire    ┌──────────┐
- │ Draft │ ────────────► │ Active │ ──────────► │ Inactive │
- └───────┘               └────────┘             └──────────┘
-                              │
-                              │ returns answers
-                              ▼
-                          end users
+```mermaid
+ flowchart LR
+    Draft["Draft"] -->|review / approve| Active["Active"]
+    Active -->|retire| Inactive["Inactive"]
+
+    Active -->|returns approved answers| EndUsers["End users"]
 ```
 
 - **Draft** — record is being worked on; not visible to end users.
-- **Active** — record is indexed and its answer is returned to users.
+- **Active** — the record is indexed, and its answer is returned to users.
 - **Inactive** — record is retired; retained for audit purposes but not indexed.
 
 ---
@@ -84,8 +82,8 @@ synonyms:
 
 ### Tips for synonym management
 
-- Use the **stemmed** form of the canonical token as the key (e.g. `employ` not `employees`).
-- Include acronyms and abbreviations your users commonly use (e.g. `pto` for "paid time off").
+- Use the **stemmed** form of the canonical token as the key (e.g., `employ` not `employees`).
+- Include acronyms and abbreviations your users commonly use (e.g., `pto` for "paid time off").
 - Add product names, team names, or internal jargon specific to your organization.
 - Rebuild the index (click **Publish Updates**) after editing this file.
 
