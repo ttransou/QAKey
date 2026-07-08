@@ -108,7 +108,7 @@ raw text
 
 **`engine.rebuild(records)`**
 
-Called automatically after a successful publish. Reinitialises the index with the new set of active records.
+Called automatically after a successful publish. Reinitializes the index with the new set of active records.
 
 ---
 
