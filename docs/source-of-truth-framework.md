@@ -58,12 +58,52 @@ The intended maintainer workflow is:
 1. Add or edit records in the content editor.
 2. Keep incomplete or unreviewed content in `Draft`.
 3. Mark approved content as `Active`.
-4. Use `Inactive` for content that should remain in the record history but no longer answer user questions.
+4. Use `Inactive` for content that should remain in the record history but no longer answers user questions.
 5. Review the Publishing Stage panel, including staged record IDs and action types.
 6. Select **Publish Updates** (or **Publish Staged Changes**).
 7. Let QAKey validate records, persist changes, rebuild the index, and expose approved content to end users.
 
-This keeps publishing explicit and reviewable rather than silently mutating live answers.
+```mermaid
+flowchart TD
+    A["Add or edit records<br/>in the Content Editor"] --> B{"Is the content<br/>complete and reviewed?"}
+
+    B -->|No| C["Keep record in Draft"]
+    C --> A
+
+    B -->|Yes| D["Mark approved content<br/>as Active"]
+
+    A --> E["Mark outdated content<br/>as Inactive<br/>when needed"]
+    D --> F["Review Publishing Stage panel"]
+    E --> F
+
+    F --> G["Confirm staged record IDs<br/>and action types"]
+    G --> H["Select Publish Updates<br/>or Publish Staged Changes"]
+
+    H --> I["QAKey validates records"]
+    I --> J{"Validation passed?"}
+
+    J -->|No| K["Show plain-language<br/>validation errors"]
+    K --> A
+
+    J -->|Yes| L["Persist changes"]
+    L --> M["Rebuild matching index"]
+    M --> N["Expose approved Active content<br/>to end users"]
+    N --> O["End users receive<br/>approved answers"]
+
+    classDef defaultNode fill:#ffffff,stroke:#374151,color:#111827,stroke-width:2px;
+    classDef decisionNode fill:#fff7ed,stroke:#9a3412,color:#111827,stroke-width:2px;
+    classDef publishNode fill:#eff6ff,stroke:#1d4ed8,color:#111827,stroke-width:2px;
+    classDef liveNode fill:#ecfdf5,stroke:#047857,color:#111827,stroke-width:2px;
+    classDef errorNode fill:#fef2f2,stroke:#b91c1c,color:#111827,stroke-width:2px;
+
+    class A,C,D,E,F,G defaultNode;
+    class B,J decisionNode;
+    class H,I,L,M publishNode;
+    class N,O liveNode;
+    class K errorNode;
+```
+
+This keeps publishing explicit, reviewable changes rather than silently mutating live answers.
 
 ---
 
