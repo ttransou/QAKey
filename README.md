@@ -120,6 +120,7 @@ QAKey can be a practical "trusted answer layer" inside a broader knowledge archi
 | **Status management** | Draft → Active → Inactive lifecycle for every record |
 | **Audit fields** | Contributor, reviewer, version, created/updated timestamps — all automatic |
 | **Import and export** | CSV/XLSX import preview and CSV/XLSX export for audit and record keeping |
+| **Import templates** | Downloadable CSV/XLSX templates that match the import preview parser |
 | **Editor access boundary** | Optional admin/password gate for `/editor`, extensible to enterprise auth layers |
 | **Synonym support** | Domain-specific terms and abbreviations handled transparently |
 | **REST API** | All operations available as JSON endpoints |
@@ -316,6 +317,8 @@ Workflow-focused tests:
 - [docs/schema.md](docs/schema.md) — knowledge record schema and lifecycle semantics
 - [docs/deployment.md](docs/deployment.md) — runtime/deployment guidance and editor security boundary
 - [docs/contributing.md](docs/contributing.md) — content and code contribution workflow
+- [docs/use-cases.md](docs/use-cases.md) — audience-specific usage patterns and fit guidance
+- [docs/operational-playbook.md](docs/operational-playbook.md) — maintainer workflow, governance, and rollback guidance
 
 ---
 

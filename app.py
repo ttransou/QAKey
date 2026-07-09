@@ -51,6 +51,15 @@ _engine = QAEngine(
 
 _editor_cfg = _config.get("editor", {})
 _valid_statuses = {"Draft", "Active", "Inactive"}
+_IMPORT_TEMPLATE_HEADERS = [
+    "canonical_question",
+    "answer",
+    "status",
+    "alternate_phrasings",
+    "tags",
+    "contributor",
+    "reviewer",
+]
 
 
 def _editor_auth_enabled() -> bool:
@@ -203,6 +212,25 @@ def _parse_import_records(file_name: str, raw: bytes, defaults: dict) -> tuple[l
     if lower_name.endswith(".xlsx"):
         return _parse_records_from_xlsx(raw, defaults)
     return [], ["Unsupported file type. Only .csv and .xlsx are allowed"]
+
+
+def _build_import_template_csv() -> io.BytesIO:
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=_IMPORT_TEMPLATE_HEADERS)
+    writer.writeheader()
+    return io.BytesIO(output.getvalue().encode("utf-8"))
+
+
+def _build_import_template_xlsx() -> io.BytesIO:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "QAKey Import Template"
+    sheet.append(_IMPORT_TEMPLATE_HEADERS)
+    sheet.freeze_panes = "A2"
+    stream = io.BytesIO()
+    workbook.save(stream)
+    stream.seek(0)
+    return stream
 
 # ---------------------------------------------------------------------------
 # Page routes
@@ -403,6 +431,32 @@ def api_records_export():
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             as_attachment=True,
             download_name="qakey-records.xlsx",
+        )
+
+    return jsonify({"error": "format must be 'csv' or 'xlsx'"}), 400
+
+
+@app.route("/api/records/import-template", methods=["GET"])
+@_require_editor_api_auth
+def api_records_import_template():
+    template_format = (request.args.get("format") or "csv").lower()
+
+    if template_format == "csv":
+        csv_bytes = _build_import_template_csv()
+        return send_file(
+            csv_bytes,
+            mimetype="text/csv",
+            as_attachment=True,
+            download_name="qakey-import-template.csv",
+        )
+
+    if template_format == "xlsx":
+        stream = _build_import_template_xlsx()
+        return send_file(
+            stream,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name="qakey-import-template.xlsx",
         )
 
     return jsonify({"error": "format must be 'csv' or 'xlsx'"}), 400
