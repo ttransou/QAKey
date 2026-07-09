@@ -29,13 +29,53 @@ knowledge:
 matching:
   # Minimum cosine-similarity score (0–1) required to return an answer.
   # Lower values → more permissive matches (more false positives).
-  # Higher values → stricter matches (more "no match" responses).
+  # Higher values → stricter matches (more fallback responses).
   confidence_threshold: 0.25
 
-  # Message shown when no record meets the threshold.
+  # If the top two matches are within this margin, QAKey should not
+  # silently choose between them. It should return an ambiguity fallback.
+  ambiguity_margin: 0.08
+
+  # Maximum number of canonical-question suggestions to show when
+  # QAKey finds multiple plausible matches.
+  max_suggestions: 3
+
+# ------------------------------------------------------------------
+# Deterministic fallback behavior
+# ------------------------------------------------------------------
+fallback:
+  # QAKey should never generate, infer, or improvise an answer when
+  # confidence is low. Fallback responses are controlled messages.
+  enabled: true
+
+  # Message shown when no Active record meets the confidence threshold.
   no_match_message: >
     I could not find an approved answer for that question.
-    Please rephrase your question or contact the team directly.
+    Please rephrase your question or contact the appropriate team directly.
+
+  # Message shown when more than one Active record is close enough that
+  # QAKey should not choose silently.
+  ambiguous_match_message: >
+    I found more than one possible approved question.
+    Please choose the closest match or rephrase your question.
+
+  # Message shown when a related record may exist but is Draft or Inactive.
+  unavailable_record_message: >
+    This topic may exist in the knowledge base, but it is not currently
+    available as an approved answer.
+
+  # Show canonical-question suggestions when fallback behavior can safely
+  # offer them without inventing new content.
+  show_suggestions: true
+
+  # Log unmatched or low-confidence queries so maintainers can improve
+  # canonical questions, alternate phrasings, and synonyms.
+  log_unmatched_queries: true
+  log_low_confidence_queries: true
+
+  # Optional file path for local fallback review logs.
+  # Useful for small/local deployments before a database or analytics layer exists.
+  fallback_log_path: "logs/fallback_queries.jsonl"
 
 # ------------------------------------------------------------------
 # Editor
