@@ -255,133 +255,133 @@ class MatchResult:
 class QAEngine:
     """Question-matching engine with TF-IDF cosine similarity."""
 
-  def __init__(
-    self,
-    records: List[QARecord],
-    synonyms: Optional[Dict[str, List[str]]] = None,
-    confidence_threshold: float = 0.25,
-    ambiguity_margin: float = 0.08,
-    max_suggestions: int = 3,
-    no_match_message: str = (
-        "I could not find an approved answer for that question. "
-        "Please rephrase your question or contact the appropriate team directly."
-    ),
-    ambiguous_match_message: str = (
-        "I found more than one possible approved question. "
-        "Please choose the closest match or rephrase your question."
-    ),
-) -> None:
-    self.synonyms = synonyms or {}
-    self.confidence_threshold = confidence_threshold
-    self.ambiguity_margin = ambiguity_margin
-    self.max_suggestions = max_suggestions
-    self.no_match_message = no_match_message
-    self.ambiguous_match_message = ambiguous_match_message
-    self._records_by_id: Dict[str, QARecord] = {r.id: r for r in records}
-    self._index = _build_index(records, self.synonyms)
+    def __init__(
+        self,
+        records: List[QARecord],
+        synonyms: Optional[Dict[str, List[str]]] = None,
+        confidence_threshold: float = 0.25,
+        ambiguity_margin: float = 0.08,
+        max_suggestions: int = 3,
+        no_match_message: str = (
+            "I could not find an approved answer for that question. "
+            "Please rephrase your question or contact the appropriate team directly."
+        ),
+        ambiguous_match_message: str = (
+            "I found more than one possible approved question. "
+            "Please choose the closest match or rephrase your question."
+        ),
+    ) -> None:
+        self.synonyms = synonyms or {}
+        self.confidence_threshold = confidence_threshold
+        self.ambiguity_margin = ambiguity_margin
+        self.max_suggestions = max_suggestions
+        self.no_match_message = no_match_message
+        self.ambiguous_match_message = ambiguous_match_message
+        self._records_by_id: Dict[str, QARecord] = {r.id: r for r in records}
+        self._index = _build_index(records, self.synonyms)
 
     def rebuild(self, records: List[QARecord]) -> None:
         """Rebuild the index after content changes."""
         self._records_by_id = {r.id: r for r in records}
         self._index = _build_index(records, self.synonyms)
 
-   def match(self, query: str) -> MatchResult:
-    """Match *query* to the best active Q&A record.
+    def match(self, query: str) -> MatchResult:
+        """Match *query* to the best active Q&A record.
 
-    Returns either:
-    - a matched approved record,
-    - a deterministic no-match fallback, or
-    - a deterministic ambiguity fallback.
-    """
-    clean_query = query.strip()
+        Returns either:
+        - a matched approved record,
+        - a deterministic no-match fallback, or
+        - a deterministic ambiguity fallback.
+        """
+        clean_query = query.strip()
 
-    if not clean_query:
-        return MatchResult(
-            record=None,
-            confidence=0.0,
-            threshold=self.confidence_threshold,
-            fallback_type="empty_query",
-            message="Please enter a question.",
-        )
+        if not clean_query:
+            return MatchResult(
+                record=None,
+                confidence=0.0,
+                threshold=self.confidence_threshold,
+                fallback_type="empty_query",
+                message="Please enter a question.",
+            )
 
-    q_tokens = process(clean_query, self.synonyms)
+        q_tokens = process(clean_query, self.synonyms)
 
-    if not q_tokens:
-        return MatchResult(
-            record=None,
-            confidence=0.0,
-            threshold=self.confidence_threshold,
-            fallback_type="no_match",
-            message=self.no_match_message,
-        )
+        if not q_tokens:
+            return MatchResult(
+                record=None,
+                confidence=0.0,
+                threshold=self.confidence_threshold,
+                fallback_type="no_match",
+                message=self.no_match_message,
+            )
 
-    idf = self._index["idf"]
-    documents = self._index["documents"]
+        idf = self._index["idf"]
+        documents = self._index["documents"]
 
-    if not documents:
-        return MatchResult(
-            record=None,
-            confidence=0.0,
-            threshold=self.confidence_threshold,
-            fallback_type="no_active_records",
-            message=self.no_match_message,
-        )
+        if not documents:
+            return MatchResult(
+                record=None,
+                confidence=0.0,
+                threshold=self.confidence_threshold,
+                fallback_type="no_active_records",
+                message=self.no_match_message,
+            )
 
-    scored: List[tuple[str, float]] = []
+        scored: List[tuple[str, float]] = []
 
-    for record_id, doc_tokens in documents.items():
-        score = _cosine(q_tokens, doc_tokens, idf)
-        scored.append((record_id, score))
+        for record_id, doc_tokens in documents.items():
+            score = _cosine(q_tokens, doc_tokens, idf)
+            scored.append((record_id, score))
 
-    scored.sort(key=lambda item: item[1], reverse=True)
+        scored.sort(key=lambda item: item[1], reverse=True)
 
-    best_id, best_score = scored[0]
+        best_id, best_score = scored[0]
 
-    if best_score < self.confidence_threshold:
-        return MatchResult(
-            record=None,
-            confidence=best_score,
-            threshold=self.confidence_threshold,
-            fallback_type="no_match",
-            message=self.no_match_message,
-        )
+        if best_score < self.confidence_threshold:
+            return MatchResult(
+                record=None,
+                confidence=best_score,
+                threshold=self.confidence_threshold,
+                fallback_type="no_match",
+                message=self.no_match_message,
+            )
 
-    close_matches = [
-        (record_id, score)
-        for record_id, score in scored[1:]
-        if best_score - score <= self.ambiguity_margin
-        and score >= self.confidence_threshold
-    ]
+        close_matches = [
+            (record_id, score)
+            for record_id, score in scored[1:]
+            if best_score - score <= self.ambiguity_margin
+            and score >= self.confidence_threshold
+        ]
 
-    if close_matches:
-        suggestion_items = [(best_id, best_score)] + close_matches
-        suggestions: List[MatchSuggestion] = []
+        if close_matches:
+            suggestion_items = [(best_id, best_score)] + close_matches
+            suggestions: List[MatchSuggestion] = []
 
-        for record_id, score in suggestion_items[: self.max_suggestions]:
-            record = self._records_by_id.get(record_id)
-            if record is None:
-                continue
+            for record_id, score in suggestion_items[: self.max_suggestions]:
+                record = self._records_by_id.get(record_id)
+                if record is None:
+                    continue
 
-            suggestions.append(
-                MatchSuggestion(
-                    record_id=record.id,
-                    canonical_question=record.canonical_question,
-                    confidence=score,
+                suggestions.append(
+                    MatchSuggestion(
+                        record_id=record.id,
+                        canonical_question=record.canonical_question,
+                        confidence=score,
+                    )
                 )
+
+            return MatchResult(
+                record=None,
+                confidence=best_score,
+                threshold=self.confidence_threshold,
+                fallback_type="ambiguous",
+                message=self.ambiguous_match_message,
+                suggestions=suggestions,
             )
 
         return MatchResult(
-            record=None,
+            record=self._records_by_id.get(best_id),
             confidence=best_score,
             threshold=self.confidence_threshold,
-            fallback_type="ambiguous",
-            message=self.ambiguous_match_message,
-            suggestions=suggestions,
+            status="matched",
         )
-
-    return MatchResult(
-        record=self._records_by_id.get(best_id),
-        confidence=best_score,
-        threshold=self.confidence_threshold,
-        status="matched",
-    )

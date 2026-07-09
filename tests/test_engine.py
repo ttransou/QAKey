@@ -143,12 +143,81 @@ def test_engine_empty_query_returns_no_match(sample_records):
     result = engine.match("")
     assert result.record is None
     assert result.confidence == 0.0
+    assert result.fallback_type == "empty_query"
+    assert result.message == "Please enter a question."
 
 
 def test_engine_whitespace_only_query(sample_records):
     engine = QAEngine(sample_records)
     result = engine.match("   ")
     assert result.record is None
+    assert result.fallback_type == "empty_query"
+
+
+def test_engine_stopword_only_query_returns_no_match_fallback(sample_records):
+    engine = QAEngine(sample_records)
+    result = engine.match("the and for")
+    assert result.record is None
+    assert result.fallback_type == "no_match"
+    assert result.message == engine.no_match_message
+
+
+def test_engine_no_active_records_returns_specific_fallback():
+    records = [
+        QARecord(
+            id="qa-d001",
+            canonical_question="Draft only question",
+            alternate_phrasings=["draft only"],
+            answer="Draft only answer",
+            status="Draft",
+        )
+    ]
+    engine = QAEngine(records)
+    result = engine.match("draft only")
+    assert result.record is None
+    assert result.fallback_type == "no_active_records"
+    assert result.message == engine.no_match_message
+
+
+def test_engine_ambiguous_match_returns_suggestions():
+    records = [
+        QARecord(
+            id="qa-a001",
+            canonical_question="How do I access VPN",
+            alternate_phrasings=["vpn access"],
+            answer="Use the VPN client.",
+            status="Active",
+        ),
+        QARecord(
+            id="qa-a002",
+            canonical_question="How do I access VPN",
+            alternate_phrasings=["vpn access"],
+            answer="Use the secure tunnel app.",
+            status="Active",
+        ),
+    ]
+    engine = QAEngine(records, confidence_threshold=0.1, ambiguity_margin=0.2)
+    result = engine.match("vpn access")
+    assert result.record is None
+    assert result.fallback_type == "ambiguous"
+    assert result.message == engine.ambiguous_match_message
+    assert len(result.suggestions) == 2
+
+
+def test_engine_ambiguous_match_skips_missing_record_suggestion(sample_records):
+    engine = QAEngine(sample_records, confidence_threshold=0.1, ambiguity_margin=0.2)
+    engine._index["documents"] = {
+        "qa-t001": ["vpn", "access"],
+        "qa-missing": ["vpn", "access"],
+    }
+    engine._index["idf"] = {"vpn": 1.0, "access": 1.0}
+
+    result = engine.match("vpn access")
+
+    assert result.record is None
+    assert result.fallback_type == "ambiguous"
+    assert len(result.suggestions) == 1
+    assert result.suggestions[0].record_id == "qa-t001"
 
 
 def test_engine_skips_draft_records(sample_records):
@@ -194,7 +263,8 @@ def test_match_result_to_dict_no_match(sample_records):
     result = engine.match("zyxwvutsrqponmlkjihgfedcba")
     d = result.to_dict()
     assert d["matched"] is False
-    assert d["answer"] is None
+    assert d["answer"] == engine.no_match_message
+    assert d["fallback_type"] == "no_match"
 
 
 def test_engine_with_synonyms(sample_records):
