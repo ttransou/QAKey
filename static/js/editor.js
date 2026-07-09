@@ -12,6 +12,7 @@ let statusFilter = "All";
 let expandedRecordId = null;
 let undoStack = [];
 let hasUnpublishedChanges = false;
+let feedbackAlerts = [];
 
 const editModal   = new bootstrap.Modal(document.getElementById("editModal"));
 const deleteModal = new bootstrap.Modal(document.getElementById("deleteModal"));
@@ -49,6 +50,7 @@ async function loadRecords() {
     renderUndoState();
     renderTable();
     renderWorkspaceSummary();
+    await loadFeedbackAlerts();
   } catch (e) {
     showBanner("danger", "Failed to load records: " + e.message);
   }
@@ -113,11 +115,11 @@ function renderTable() {
           <div class="row g-3">
             <div class="col-lg-7">
               <div class="small text-uppercase fw-semibold text-muted mb-2">Approved answer</div>
-              <div class="rendered-answer record-detail-answer border rounded bg-white p-3">${escHtml(r.answer)}</div>
+              <div class="rendered-answer record-detail-answer border rounded editor-surface p-3">${escHtml(r.answer)}</div>
             </div>
             <div class="col-lg-5">
               <div class="small text-uppercase fw-semibold text-muted mb-2">Record metadata</div>
-              <div class="border rounded bg-white p-3 small">
+              <div class="border rounded editor-surface p-3 small">
                 <div class="mb-2"><strong>Status:</strong> ${escHtml(r.status)}</div>
                 <div class="mb-2"><strong>Contributor:</strong> ${escHtml(r.contributor || "—")}</div>
                 <div class="mb-2"><strong>Reviewer:</strong> ${escHtml(r.reviewer || "—")}</div>
@@ -388,7 +390,7 @@ function renderPublishStage() {
 
   const entries = getPendingChangeEntries();
   recordsList.innerHTML = entries.map(entry => `
-    <div class="border rounded px-2 py-2 mb-1 bg-white">
+    <div class="border rounded px-2 py-2 mb-1 editor-surface">
       <span class="badge text-bg-light border me-1">${escHtml(entry.action)}</span>
       <span class="font-monospace">${escHtml(entry.id || "(pending id)")}</span>
       ${entry.question ? `<span class="text-muted"> — ${escHtml(entry.question)}</span>` : ""}
@@ -476,6 +478,81 @@ function renderNeedsReviewQueue() {
       openEditModal(id);
     });
   });
+}
+
+async function loadFeedbackAlerts() {
+  try {
+    const result = await api("GET", "/api/editor/feedback-alerts");
+    feedbackAlerts = result.alerts || [];
+    renderFeedbackAlerts();
+    if (feedbackAlerts.length) {
+      showBanner(
+        "warning",
+        `<strong>${feedbackAlerts.length}</strong> unresolved answer feedback alert(s) need attention in the editor.`
+      );
+    }
+  } catch (e) {
+    showBanner("danger", "Failed to load feedback alerts: " + e.message);
+  }
+}
+
+function renderFeedbackAlerts() {
+  const countNode = document.getElementById("feedbackAlertCount");
+  const summaryNode = document.getElementById("feedbackAlertSummary");
+  const listNode = document.getElementById("feedbackAlertList");
+
+  countNode.textContent = String(feedbackAlerts.length);
+
+  if (!feedbackAlerts.length) {
+    summaryNode.textContent = "No unresolved feedback alerts.";
+    listNode.innerHTML = `
+      <div class="review-queue-empty p-3 text-muted small">
+        User feedback will appear here when an answer is marked not helpful or an answer fallback is returned.
+      </div>`;
+    return;
+  }
+
+  summaryNode.textContent = `${feedbackAlerts.length} unresolved alert(s) from user feedback.`;
+  listNode.innerHTML = feedbackAlerts.map(alert => `
+    <div class="border rounded p-3 editor-surface">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+        <div>
+          <div class="fw-semibold">${escHtml(alert.question || "Feedback item")}</div>
+          <div class="small text-muted">
+            ${escHtml(alert.fallback_type ? `Fallback: ${alert.fallback_type}` : alert.matched ? "Matched answer" : "Unmatched answer")}
+            ${alert.occurrences > 1 ? ` · ${escHtml(String(alert.occurrences))} reports` : ""}
+          </div>
+        </div>
+        <span class="badge text-bg-warning">Needs attention</span>
+      </div>
+      ${alert.comment ? `<div class="small text-muted mb-2">Comment: ${escHtml(alert.comment)}</div>` : ""}
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        ${alert.record_id ? `<button type="button" class="btn btn-outline-primary btn-sm open-feedback-record" data-id="${escHtml(alert.record_id)}">Open record</button>` : ""}
+        <button type="button" class="btn btn-success btn-sm resolve-feedback-alert" data-id="${escHtml(alert.id)}">Mark addressed</button>
+      </div>
+    </div>
+  `).join("");
+
+  listNode.querySelectorAll(".open-feedback-record").forEach(btn => {
+    btn.addEventListener("click", () => {
+      openEditModal(btn.dataset.id);
+    });
+  });
+
+  listNode.querySelectorAll(".resolve-feedback-alert").forEach(btn => {
+    btn.addEventListener("click", () => resolveFeedbackAlert(btn.dataset.id));
+  });
+}
+
+async function resolveFeedbackAlert(id) {
+  try {
+    await api("POST", `/api/editor/feedback-alerts/${encodeURIComponent(id)}/resolve`);
+    feedbackAlerts = feedbackAlerts.filter(alert => alert.id !== id);
+    renderFeedbackAlerts();
+    showBanner("success", "Feedback alert marked as addressed.");
+  } catch (e) {
+    showBanner("danger", "Failed to resolve feedback alert: " + e.message);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -838,7 +915,7 @@ function renderImportPreview(result) {
     : "";
 
   preview.innerHTML = errorBlock + recordsToImport.map((record, idx) => `
-    <div class="border rounded bg-white p-3 mb-3">
+      <div class="border rounded editor-surface p-3 mb-3">
       <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
         <strong>${idx + 1}. ${escHtml(record.canonical_question)}</strong>
         <span class="badge bg-secondary">${escHtml(record.status)}</span>

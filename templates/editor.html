@@ -4,22 +4,45 @@
 
 {% block head %}
 <style>
+  :root {
+    --editor-surface: var(--bs-body-bg);
+    --editor-surface-strong: var(--bs-tertiary-bg);
+    --editor-surface-muted: var(--bs-secondary-bg);
+    --editor-border: var(--bs-border-color);
+    --editor-shadow: 0 8px 30px rgba(16, 24, 40, 0.05);
+  }
+  [data-bs-theme="dark"] {
+    --editor-surface: #111418;
+    --editor-surface-strong: #171b20;
+    --editor-surface-muted: #1a1f26;
+    --editor-border: #2a2f38;
+    --editor-shadow: none;
+  }
   #recordsTable th { white-space: nowrap; }
   .status-active   { color: #198754; font-weight: 600; }
   .status-draft    { color: #6c757d; font-weight: 600; }
   .status-inactive { color: #dc3545; font-weight: 600; }
   .truncate        { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #publishBar      { position: sticky; top: 0; z-index: 100; }
+  #publishBar      {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--editor-surface);
+    border-color: var(--editor-border) !important;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04);
+  }
   .import-answer-preview { white-space: pre-wrap; line-height: 1.6; margin: 0; }
   .workspace-hero {
-    background: linear-gradient(135deg, #f4f8ff 0%, #eef9f3 100%);
-    border: 1px solid #dbe7ff;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--editor-surface) 86%, #dbe7ff 14%) 0%, color-mix(in srgb, var(--editor-surface) 88%, #eef9f3 12%) 100%);
+    border: 1px solid var(--editor-border);
     border-radius: 1rem;
+    color: var(--bs-body-color);
   }
   .workspace-stat {
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--editor-border);
     border-radius: 1rem;
-    background: #fff;
+    background: var(--editor-surface);
+    color: var(--bs-body-color);
   }
   .workspace-stat-value {
     font-size: 1.8rem;
@@ -27,21 +50,24 @@
     line-height: 1;
   }
   .workspace-panel {
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--editor-border);
     border-radius: 1rem;
-    background: #fff;
+    background: var(--editor-surface);
+    color: var(--bs-body-color);
+    box-shadow: var(--editor-shadow);
   }
   .workspace-helper-list {
     padding-left: 1rem;
     margin-bottom: 0;
   }
   .review-queue-empty {
-    border: 1px dashed #cbd5e1;
+    border: 1px dashed var(--editor-border);
     border-radius: 0.85rem;
-    background: #f8fafc;
+    background: var(--editor-surface-muted);
+    color: var(--bs-secondary-color);
   }
   .record-detail-cell {
-    background: #fbfcff;
+    background: var(--editor-surface-strong);
   }
   .record-detail-answer {
     white-space: pre-wrap;
@@ -50,13 +76,19 @@
     min-width: 2.25rem;
   }
   .publish-stage-empty {
-    border: 1px dashed #cbd5e1;
+    border: 1px dashed var(--editor-border);
     border-radius: 0.75rem;
-    background: #f8fafc;
+    background: var(--editor-surface-muted);
+    color: var(--bs-secondary-color);
   }
   .publish-stage-records {
     max-height: 180px;
     overflow: auto;
+  }
+  .editor-surface {
+    background: var(--editor-surface) !important;
+    color: var(--bs-body-color) !important;
+    border-color: var(--editor-border) !important;
   }
 </style>
 {% endblock %}
@@ -64,7 +96,7 @@
 {% block content %}
 
 <!-- Toolbar -->
-<div id="publishBar" class="d-flex align-items-center gap-2 bg-white border-bottom py-2 mb-3 flex-wrap">
+<div id="publishBar" class="d-flex align-items-center gap-2 editor-surface border-bottom py-2 mb-3 flex-wrap">
   <h5 class="mb-0 me-auto fw-bold">
     <i class="bi bi-table me-1 text-primary"></i>Content Editor
   </h5>
@@ -226,6 +258,21 @@
       <div class="small text-muted mb-0">
         Use <strong>Inspect</strong> to review formatting-heavy answers, and use <strong>Sunset</strong> to move old guidance out of live matching while preserving history.
       </div>
+    </div>
+  </div>
+</section>
+
+<section class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="workspace-panel p-3">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <div>
+          <h3 class="h6 fw-bold mb-1">Answer feedback alerts</h3>
+          <div class="small text-muted" id="feedbackAlertSummary">No unresolved feedback alerts.</div>
+        </div>
+        <span class="badge text-bg-danger" id="feedbackAlertCount">0</span>
+      </div>
+      <div id="feedbackAlertList" class="d-grid gap-2"></div>
     </div>
   </div>
 </section>
@@ -436,7 +483,7 @@
         </div>
         <div id="bulkImportErrors" class="d-none alert alert-danger small"></div>
         <div id="bulkImportSummary" class="small text-muted mb-2">No preview yet.</div>
-        <div id="bulkImportPreview" class="border rounded p-3 bg-light-subtle small" style="min-height: 220px; max-height: 420px; overflow:auto;">
+        <div id="bulkImportPreview" class="border rounded p-3 editor-surface small" style="min-height: 220px; max-height: 420px; overflow:auto;">
           <div class="text-muted">Parsed records will appear here after preview.</div>
         </div>
           </div>

@@ -123,6 +123,7 @@ Called automatically after a successful publish. Reinitializes the index with th
 | `POST /editor/logout` | `editor_logout()` | Ends editor auth session |
 | `GET /editor` | `editor()` | Renders `templates/editor.html` |
 | `POST /api/query` | `api_query()` | `{"question": "..."}` → `MatchResult` |
+| `POST /api/feedback` | `api_feedback()` | Records helpful/not-helpful answer feedback as compact alerts |
 | `GET /api/records` | `api_list_records()` | Returns all records as JSON |
 | `POST /api/records` | `api_create_record()` | Creates a record in memory |
 | `PUT /api/records/<id>` | `api_update_record()` | Updates a record in memory |
@@ -132,23 +133,29 @@ Called automatically after a successful publish. Reinitializes the index with th
 | `GET /api/records/export?format=csv|xlsx` | `api_records_export()` | Exports records for audit and archiving |
 | `POST /api/ingest/preview` | `api_ingest_preview()` | Extracts, chunks, and parses pasted source text into preview records |
 | `POST /api/publish` | `api_publish()` | Validates, saves, rebuilds index |
+| `GET /api/editor/feedback-alerts` | `api_editor_feedback_alerts()` | Lists unresolved answer-feedback alerts for the Content Editor |
+| `POST /api/editor/feedback-alerts/<id>/resolve` | `api_editor_feedback_alert_resolve()` | Marks a feedback alert as addressed |
 | `GET /api/health` | `api_health()` | Health check |
 
 ### Frontend
 
-The query interface (`static/js/app.js`) sends POST requests to `/api/query` and renders the result. A session history of recent queries is maintained in memory. The front page includes user-side-only messaging and a light/dark/system mode toggle.
+The query interface (`static/js/app.js`) sends POST requests to `/api/query` and renders the result. A session history of recent queries is maintained in memory. The front page includes user-side-only messaging, a light/dark/system mode toggle, and feedback buttons that post to `/api/feedback`.
 
-The editor (`static/js/editor.js`) loads all records on page load and manages them through the REST API. Add, edit, delete, sunset, and import operations update in-memory staged changes immediately; changes are reflected in the table and in the Publishing Stage panel. The editor supports:
+The editor (`static/js/editor.js`) loads all records on page load and manages them through the REST API. Add, edit, delete, sunset, import, feedback-alert resolution, and publish operations update in-memory staged changes immediately; changes are reflected in the table, the Publishing Stage panel, and the feedback alert inbox. The editor supports:
 
 - CSV/XLSX import template downloads
 - CSV/XLSX import preview before record creation
 - CSV/XLSX export for audit and record keeping
 - Undo-last-change for staged unpublished operations
 - ID-level publishing-stage visibility before commit, including create/update/delete/sunset/bulk import snapshots
+- Answer-feedback alert inbox with one-click resolution for unresolved user feedback
+- Theme-aware surfaces that stay legible in light and dark mode
 
 Editor-first note: the normal ingestion path is direct record maintenance in the Content Editor. CSV/XLSX import is supported as a secondary accelerator for bulk onboarding or migration.
 
 The **Publish Updates** and **Publish Staged Changes** actions call `/api/publish`.
+
+Answer feedback is stored as a compact alert queue rather than a growing free-form log so maintainers can triage only unresolved items.
 
 ---
 

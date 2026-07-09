@@ -251,7 +251,7 @@ QAKey ships with a **web UI** and a **REST API**.
 
 ### Query interface (`/`)
 
-End-users type a question naturally. QAKey returns the matched approved answer with a confidence score, or a configurable no-match message.
+End-users type a question naturally. QAKey returns the matched approved answer with a confidence score, or a configurable no-match message. The query UI also includes feedback buttons so users can flag an answer as helpful or not helpful.
 
 ### Content editor (`/editor`)
 
@@ -263,7 +263,8 @@ YAML or code:
 3. **Import** records from CSV/XLSX with preview and defaults (optional accelerator, not the primary path).
 4. **Export** records to CSV/XLSX for auditing.
 5. **Stage** unpublished changes with an explicit publish summary and ID-level entries.
-6. Click **Publish Updates** to validate all records, save to YAML, and rebuild the index.
+6. **Review feedback alerts** from the compact alert inbox and mark them addressed after updating content.
+7. Click **Publish Updates** to validate all records, save to YAML, and rebuild the index.
 
 When `editor.require_auth` is enabled, `/editor` is protected by a built-in admin/password login. This simple model can be replaced by an organization auth later.
 
@@ -280,6 +281,9 @@ When `editor.require_auth` is enabled, `/editor` is protected by a built-in admi
 | `POST` | `/api/records/import-preview` | Preview records parsed from CSV/XLSX |
 | `GET` | `/api/records/export?format=csv|xlsx` | Export records for audit/archival |
 | `POST` | `/api/ingest/preview` | Preview deterministic raw text parsing |
+| `POST` | `/api/feedback` | Record helpful/not-helpful answer feedback as a compact alert |
+| `GET` | `/api/editor/feedback-alerts` | List unresolved feedback alerts for the editor |
+| `POST` | `/api/editor/feedback-alerts/<id>/resolve` | Mark a feedback alert as addressed |
 | `POST` | `/api/publish` | Validate, persist, and rebuild index |
 
 ---
@@ -310,6 +314,8 @@ Fallback behavior covers three cases:
 
 Fallback responses are configurable, but they are still controlled content. They should direct the user to rephrase, choose from approved canonical questions, or contact the appropriate human owner.
 
+When answer feedback is collected, QAKey stores only unresolved alerts in the configured feedback file. The Content Editor can mark those alerts addressed so the queue stays compact.
+
 ```mermaid
 flowchart TD
     A["User asks a question"] --> B["Normalize, tokenize, stem, and expand synonyms"]
@@ -317,7 +323,7 @@ flowchart TD
     C --> D{"Best score above threshold?"}
 
     D -->|No| E["Return deterministic no-match fallback"]
-    E --> F["Optionally log unmatched query for maintainer review"]
+    E --> F["Create compact alert for Content Editor review"]
 
     D -->|Yes| G{"Multiple close matches?"}
     G -->|Yes| H["Return deterministic ambiguity fallback"]

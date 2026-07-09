@@ -77,6 +77,31 @@ matching:
 
 ---
 
+## `fallback` section
+
+```yaml
+fallback:
+  enabled: true
+  fallback_log_path: "logs/fallback_queries.jsonl"
+  no_match_message: >
+    I could not find an approved answer for that question.
+    Please rephrase your question or contact the appropriate team directly.
+  ambiguous_match_message: >
+    I found more than one possible approved question.
+    Please choose the closest match or rephrase your question.
+```
+
+| Key | Description |
+|---|---|
+| `enabled` | Enables the compact feedback-alert inbox flow when `true`. |
+| `fallback_log_path` | Path to the local JSON file used to store unresolved answer feedback alerts. The file is kept intentionally small and can be trimmed by resolving alerts in the Content Editor. |
+| `no_match_message` | Controlled message shown when no approved answer is available. |
+| `ambiguous_match_message` | Controlled message shown when more than one approved answer is plausible. |
+
+When feedback alerts are enabled, low-confidence or not-helpful answer feedback is recorded as unresolved alerts for the Content Editor rather than being accumulated as a large free-form log.
+
+---
+
 ## `editor` section
 
 ```yaml
@@ -96,6 +121,10 @@ editor:
 
 QAKey includes a simple built-in admin/password gate for editor access.
 This model is intentionally minimal and can be replaced with enterprise auth layers (SSO, AD, OAuth proxy) when needed.
+
+### Editor alert inbox
+
+The Content Editor includes a compact answer-feedback alert inbox. Alerts are loaded from the configured fallback log path and can be marked addressed from the editor UI. This keeps the stored feedback set small and focused on unresolved items only.
 
 ---
 

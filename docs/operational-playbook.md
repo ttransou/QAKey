@@ -42,6 +42,7 @@ Before publishing:
 - Confirm answers are approved and current
 - Check reviewer assignments for Draft records
 - Review the Publishing Stage panel for created, updated, sunset, deleted, and imported items
+- Review the Answer feedback alerts inbox for unresolved user feedback
 - Verify the staged list matches the intended change set
 
 After publishing:
@@ -69,6 +70,7 @@ Keep `knowledge/synonyms.yaml` aligned with how users actually ask questions.
 - Sunset old guidance instead of deleting it when history matters
 - Keep deleted records out of live answers only after confirming the replacement content is ready
 - Undo unpublished staged changes before publishing if you need to back out a mistake
+- Mark resolved feedback alerts addressed after the content change has been made
 
 ---
 

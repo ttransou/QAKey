@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import csv
+import json
 import io
 import os
+import uuid
 from functools import wraps
+from datetime import datetime, timezone
 
 import yaml
 from flask import Flask, jsonify, redirect, render_template, request, send_file, session, url_for
@@ -50,6 +53,7 @@ _engine = QAEngine(
 )
 
 _editor_cfg = _config.get("editor", {})
+_fallback_cfg = _config.get("fallback", {})
 _valid_statuses = {"Draft", "Active", "Inactive"}
 _IMPORT_TEMPLATE_HEADERS = [
     "canonical_question",
@@ -232,6 +236,120 @@ def _build_import_template_xlsx() -> io.BytesIO:
     stream.seek(0)
     return stream
 
+
+def _feedback_log_path() -> str:
+    return _fallback_cfg.get("fallback_log_path", "")
+
+
+def _feedback_logging_enabled() -> bool:
+    return bool(_fallback_cfg.get("enabled", True)) and bool(_feedback_log_path())
+
+
+def _load_feedback_alerts() -> list[dict]:
+    log_path = _feedback_log_path()
+    if not log_path:
+        return []
+
+    if not os.path.exists(log_path):
+        return []
+
+    with open(log_path, encoding="utf-8") as fh:
+        raw = fh.read().strip()
+    if not raw:
+        return []
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        alerts: list[dict] = []
+        for line in raw.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                alerts.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        return alerts
+
+    if isinstance(data, dict):
+        alerts = data.get("alerts") or []
+        if isinstance(alerts, list):
+            return alerts
+
+    if isinstance(data, list):
+        return data
+
+    return []
+
+
+def _save_feedback_alerts(alerts: list[dict]) -> None:
+    log_path = _feedback_log_path()
+    if not log_path:
+        return
+
+    os.makedirs(os.path.dirname(log_path) or ".", exist_ok=True)
+    compact_alerts = alerts[-int(_fallback_cfg.get("max_alerts", 25)):]
+    with open(log_path, "w", encoding="utf-8") as fh:
+        json.dump({"alerts": compact_alerts}, fh, ensure_ascii=False, separators=(",", ":"))
+
+
+def _upsert_feedback_alert(event: dict) -> bool:
+    alerts = _load_feedback_alerts()
+    key = (
+        event.get("question", ""),
+        event.get("record_id") or "",
+        event.get("fallback_type") or "",
+    )
+
+    for alert in alerts:
+        alert_key = (
+            alert.get("question", ""),
+            alert.get("record_id") or "",
+            alert.get("fallback_type") or "",
+        )
+        if alert_key == key and alert.get("resolved_at") is None:
+            alert["occurrences"] = int(alert.get("occurrences", 1)) + 1
+            alert["last_seen_at"] = event["timestamp"]
+            alert["helpful"] = False
+            _save_feedback_alerts(alerts)
+            return True
+
+    alert = {
+        "id": str(uuid.uuid4()),
+        "created_at": event["timestamp"],
+        "last_seen_at": event["timestamp"],
+        "question": event.get("question", ""),
+        "matched": bool(event.get("matched", False)),
+        "record_id": event.get("record_id") or None,
+        "fallback_type": event.get("fallback_type") or None,
+        "confidence": event.get("confidence"),
+        "occurrences": 1,
+        "helpful": False,
+        "comment": event.get("comment") or "",
+        "resolved_at": None,
+    }
+    alerts.append(alert)
+    _save_feedback_alerts(alerts)
+    return True
+
+
+def _resolve_feedback_alert(alert_id: str) -> bool:
+    alerts = _load_feedback_alerts()
+    changed = False
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    for alert in alerts:
+        if alert.get("id") == alert_id and alert.get("resolved_at") is None:
+            alert["resolved_at"] = now
+            changed = True
+            break
+
+    if changed:
+        alerts = [alert for alert in alerts if alert.get("resolved_at") is None]
+        _save_feedback_alerts(alerts)
+    return changed
+
 # ---------------------------------------------------------------------------
 # Page routes
 # ---------------------------------------------------------------------------
@@ -296,6 +414,51 @@ def api_query():
     if payload.get("matched") and payload.get("answer"):
         payload["answer_html"] = render_answer_html(payload["answer"])
     return jsonify(payload)
+
+
+@app.route("/api/feedback", methods=["POST"])
+def api_feedback():
+    """Record simple thumbs-up/down feedback for a query result."""
+    body = request.get_json(silent=True) or {}
+    question = (body.get("question") or "").strip()
+    if not question:
+        return jsonify({"error": "question is required"}), 400
+
+    helpful = body.get("helpful")
+    if not isinstance(helpful, bool):
+        return jsonify({"error": "helpful must be a boolean"}), 400
+
+    event = {
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "question": question,
+        "helpful": helpful,
+        "matched": bool(body.get("matched", False)),
+        "record_id": (body.get("record_id") or None),
+        "fallback_type": (body.get("fallback_type") or None),
+        "confidence": body.get("confidence"),
+        "comment": (body.get("comment") or "").strip(),
+    }
+
+    recorded = False
+    if _feedback_logging_enabled() and (not helpful or not event["matched"]):
+        recorded = _upsert_feedback_alert(event)
+
+    return jsonify({"success": True, "recorded": recorded})
+
+
+@app.route("/api/editor/feedback-alerts", methods=["GET"])
+@_require_editor_api_auth
+def api_editor_feedback_alerts():
+    alerts = _load_feedback_alerts()
+    return jsonify({"count": len(alerts), "alerts": alerts})
+
+
+@app.route("/api/editor/feedback-alerts/<alert_id>/resolve", methods=["POST"])
+@_require_editor_api_auth
+def api_editor_feedback_alert_resolve(alert_id: str):
+    if not _resolve_feedback_alert(alert_id):
+        return jsonify({"error": "alert not found"}), 404
+    return jsonify({"success": True})
 
 
 @app.route("/api/records", methods=["GET"])
