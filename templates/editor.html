@@ -389,6 +389,20 @@
           </div>
         </div>
         <div class="row g-3 mb-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">Download template</label>
+            <div class="d-flex flex-wrap gap-2">
+              <button type="button" id="downloadImportCsvTemplateBtn" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-filetype-csv me-1"></i>CSV template
+              </button>
+              <button type="button" id="downloadImportXlsxTemplateBtn" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-filetype-xlsx me-1"></i>XLSX template
+              </button>
+            </div>
+            <div class="form-text">Templates use the same columns understood by the import preview parser.</div>
+          </div>
+        </div>
+        <div class="row g-3 mb-3">
           <div class="col-sm-4">
             <label class="form-label fw-semibold">Default status</label>
             <select id="bulkImportStatus" class="form-select">

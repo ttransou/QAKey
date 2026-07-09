@@ -206,6 +206,85 @@ function cloneRecord(record) {
   return JSON.parse(JSON.stringify(record));
 }
 
+function summarizeText(text, limit = 110) {
+  const compact = String(text || "").replace(/\s+/g, " ").trim();
+  if (compact.length <= limit) {
+    return compact;
+  }
+  return `${compact.slice(0, limit - 1).trimEnd()}…`;
+}
+
+function summarizeRecord(record) {
+  if (!record) return "";
+  return [
+    escHtml(record.canonical_question || ""),
+    record.status ? escHtml(`Status: ${record.status}`) : "",
+    record.answer ? escHtml(summarizeText(record.answer, 90)) : "",
+  ].filter(Boolean).join(" — ");
+}
+
+function describePendingAction(action) {
+  if (!action) {
+    return {
+      label: "Change",
+      details: "",
+    };
+  }
+
+  if (action.type === "batch-create") {
+    const records = action.records || [];
+    const sample = records.slice(0, 3).map(record => summarizeRecord(record)).filter(Boolean).join("<br>");
+    return {
+      label: "Bulk import",
+      details: [
+        `${records.length} record(s) imported`,
+        sample ? `Examples:<br>${sample}` : "",
+      ].filter(Boolean).join("<br>"),
+    };
+  }
+
+  if (action.type === "delete") {
+    const record = action.record || {};
+    return {
+      label: "Deleted",
+      details: summarizeRecord(record),
+    };
+  }
+
+  if (action.type === "create") {
+    const record = action.record || {};
+    return {
+      label: "Created",
+      details: summarizeRecord(record),
+    };
+  }
+
+  if (action.type === "update") {
+    const before = action.before || {};
+    const after = action.after || {};
+    const label = action.mode === "sunset" ? "Sunset" : "Updated";
+    const details = [
+      escHtml(before.canonical_question || after.canonical_question || ""),
+      before.status && after.status && before.status !== after.status
+        ? escHtml(`Status: ${before.status} → ${after.status}`)
+        : "",
+      before.answer && after.answer && before.answer !== after.answer
+        ? escHtml(`Answer updated: ${summarizeText(after.answer, 70)}`)
+        : "",
+    ].filter(Boolean).join("<br>");
+
+    return {
+      label,
+      details: details || summarizeRecord(after || before),
+    };
+  }
+
+  return {
+    label: "Change",
+    details: "",
+  };
+}
+
 function setDirty(isDirty) {
   hasUnpublishedChanges = isDirty;
   const badge = document.getElementById("dirtyBadge");
@@ -228,6 +307,8 @@ function getPendingChangeStats() {
     created: 0,
     updated: 0,
     deleted: 0,
+    sunset: 0,
+    imported: 0,
   };
 
   for (const action of undoStack) {
@@ -236,10 +317,14 @@ function getPendingChangeStats() {
       stats.total += 1;
     } else if (action.type === "batch-create") {
       const count = (action.ids || []).length;
-      stats.created += count;
+      stats.imported += count;
       stats.total += count;
     } else if (action.type === "update") {
-      stats.updated += 1;
+      if (action.mode === "sunset") {
+        stats.sunset += 1;
+      } else {
+        stats.updated += 1;
+      }
       stats.total += 1;
     } else if (action.type === "delete") {
       stats.deleted += 1;
@@ -254,35 +339,24 @@ function getPendingChangeEntries(limit = 12) {
   const entries = [];
 
   for (const action of undoStack) {
-    if (action.type === "create") {
+    const description = describePendingAction(action);
+    if (action.type === "batch-create") {
       entries.push({
-        action: "Created",
-        id: action.id,
-        question: action.question || "",
+        action: description.label,
+        id: (action.ids || []).slice(0, 3).join(", ") || "(pending ids)",
+        question: `${(action.records || []).length} imported record(s)`,
+        details: description.details,
       });
-    } else if (action.type === "update") {
-      const before = action.before || {};
-      entries.push({
-        action: "Updated",
-        id: before.id || "",
-        question: before.canonical_question || "",
-      });
-    } else if (action.type === "delete") {
-      const record = action.record || {};
-      entries.push({
-        action: "Deleted",
-        id: record.id || "",
-        question: record.canonical_question || "",
-      });
-    } else if (action.type === "batch-create") {
-      for (const item of action.items || []) {
-        entries.push({
-          action: "Created",
-          id: item.id || "",
-          question: item.question || "",
-        });
-      }
+      continue;
     }
+
+    const record = action.record || action.before || action.after || {};
+    entries.push({
+      action: description.label,
+      id: record.id || action.id || "(pending id)",
+      question: record.canonical_question || action.question || "",
+      details: description.details,
+    });
   }
 
   return entries.slice(-limit).reverse();
@@ -307,15 +381,18 @@ function renderPublishStage() {
   const chips = [];
   if (stats.created) chips.push(`<span class="badge text-bg-success">Created: ${stats.created}</span>`);
   if (stats.updated) chips.push(`<span class="badge text-bg-primary">Updated: ${stats.updated}</span>`);
+  if (stats.sunset) chips.push(`<span class="badge text-bg-warning">Sunset: ${stats.sunset}</span>`);
+  if (stats.imported) chips.push(`<span class="badge text-bg-info">Imported: ${stats.imported}</span>`);
   if (stats.deleted) chips.push(`<span class="badge text-bg-danger">Deleted: ${stats.deleted}</span>`);
   list.innerHTML = chips.join("");
 
   const entries = getPendingChangeEntries();
   recordsList.innerHTML = entries.map(entry => `
-    <div class="border rounded px-2 py-1 mb-1 bg-white">
+    <div class="border rounded px-2 py-2 mb-1 bg-white">
       <span class="badge text-bg-light border me-1">${escHtml(entry.action)}</span>
       <span class="font-monospace">${escHtml(entry.id || "(pending id)")}</span>
       ${entry.question ? `<span class="text-muted"> — ${escHtml(entry.question)}</span>` : ""}
+      ${entry.details ? `<div class="small text-muted mt-1">${entry.details}</div>` : ""}
     </div>
   `).join("");
 
@@ -328,8 +405,9 @@ async function undoLastChange() {
 
   try {
     if (action.type === "create") {
-      await api("DELETE", `/api/records/${encodeURIComponent(action.id)}`);
-      records = records.filter(record => record.id !== action.id);
+      const recordId = action.id || (action.record && action.record.id);
+      await api("DELETE", `/api/records/${encodeURIComponent(recordId)}`);
+      records = records.filter(record => record.id !== recordId);
     } else if (action.type === "update") {
       const previous = action.before;
       const restored = await api("PUT", `/api/records/${encodeURIComponent(previous.id)}`, {
@@ -451,16 +529,27 @@ document.getElementById("saveRecordBtn").addEventListener("click", async () => {
     let saved;
     if (id) {
       const existing = records.find(record => record.id === id);
-      if (existing) {
-        pushUndo({ type: "update", before: cloneRecord(existing) });
-      }
+      const action = existing ? {
+        type: "update",
+        before: cloneRecord(existing),
+        mode: existing.status !== "Inactive" && status === "Inactive" ? "sunset" : "update",
+      } : null;
       saved = await api("PUT", `/api/records/${encodeURIComponent(id)}`, payload);
       const idx = records.findIndex(r => r.id === id);
       if (idx !== -1) records[idx] = saved;
+      if (action) {
+        action.after = cloneRecord(saved);
+        pushUndo(action);
+      }
     } else {
       saved = await api("POST", "/api/records", payload);
       records.push(saved);
-      pushUndo({ type: "create", id: saved.id, question: saved.canonical_question || canonical });
+      pushUndo({
+        type: "create",
+        id: saved.id,
+        question: saved.canonical_question || canonical,
+        record: cloneRecord(saved),
+      });
     }
     setDirty(true);
     renderTable();
@@ -487,11 +576,11 @@ document.getElementById("confirmDeleteBtn").addEventListener("click", async () =
   if (!pendingDeleteId) return;
   try {
     const deleted = records.find(record => record.id === pendingDeleteId);
+    await api("DELETE", `/api/records/${encodeURIComponent(pendingDeleteId)}`);
+    records = records.filter(r => r.id !== pendingDeleteId);
     if (deleted) {
       pushUndo({ type: "delete", record: cloneRecord(deleted) });
     }
-    await api("DELETE", `/api/records/${encodeURIComponent(pendingDeleteId)}`);
-    records = records.filter(r => r.id !== pendingDeleteId);
     setDirty(true);
     renderTable();
     deleteModal.hide();
@@ -509,7 +598,7 @@ async function sunsetRecord(id) {
   if (!record || record.status === "Inactive") return;
 
   try {
-    pushUndo({ type: "update", before: cloneRecord(record) });
+    const action = { type: "update", before: cloneRecord(record), mode: "sunset" };
     const saved = await api("PUT", `/api/records/${encodeURIComponent(id)}`, {
       canonical_question: record.canonical_question,
       alternate_phrasings: record.alternate_phrasings || [],
@@ -519,6 +608,8 @@ async function sunsetRecord(id) {
       reviewer: record.reviewer || "",
       tags: record.tags || [],
     });
+    action.after = cloneRecord(saved);
+    pushUndo(action);
     const idx = records.findIndex(item => item.id === id);
     if (idx !== -1) records[idx] = saved;
     setDirty(true);
@@ -580,6 +671,14 @@ document.getElementById("exportCsvBtn").addEventListener("click", () => {
 
 document.getElementById("exportXlsxBtn").addEventListener("click", () => {
   window.open("/api/records/export?format=xlsx", "_blank");
+});
+
+document.getElementById("downloadImportCsvTemplateBtn").addEventListener("click", () => {
+  window.open("/api/records/import-template?format=csv", "_blank");
+});
+
+document.getElementById("downloadImportXlsxTemplateBtn").addEventListener("click", () => {
+  window.open("/api/records/import-template?format=xlsx", "_blank");
 });
 
 document.querySelectorAll(".answer-format-btn").forEach(btn => {
@@ -674,7 +773,7 @@ document.getElementById("applyImportBtn").addEventListener("click", async () => 
     pushUndo({
       type: "batch-create",
       ids: createdRecords.map(record => record.id),
-      items: createdRecords.map(record => ({ id: record.id, question: record.canonical_question || "" })),
+      records: createdRecords.map(record => cloneRecord(record)),
     });
     records.push(...createdRecords);
     setDirty(true);

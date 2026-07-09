@@ -128,6 +128,7 @@ Called automatically after a successful publish. Reinitializes the index with th
 | `PUT /api/records/<id>` | `api_update_record()` | Updates a record in memory |
 | `DELETE /api/records/<id>` | `api_delete_record()` | Deletes a record from memory |
 | `POST /api/records/import-preview` | `api_import_preview()` | Parses CSV/XLSX records for preview before import |
+| `GET /api/records/import-template?format=csv|xlsx` | `api_records_import_template()` | Downloads a blank import template that matches the parser |
 | `GET /api/records/export?format=csv|xlsx` | `api_records_export()` | Exports records for audit and archiving |
 | `POST /api/ingest/preview` | `api_ingest_preview()` | Extracts, chunks, and parses pasted source text into preview records |
 | `POST /api/publish` | `api_publish()` | Validates, saves, rebuilds index |
@@ -139,10 +140,11 @@ The query interface (`static/js/app.js`) sends POST requests to `/api/query` and
 
 The editor (`static/js/editor.js`) loads all records on page load and manages them through the REST API. Add, edit, delete, sunset, and import operations update in-memory staged changes immediately; changes are reflected in the table and in the Publishing Stage panel. The editor supports:
 
+- CSV/XLSX import template downloads
 - CSV/XLSX import preview before record creation
 - CSV/XLSX export for audit and record keeping
 - Undo-last-change for staged unpublished operations
-- ID-level publishing-stage visibility before commit
+- ID-level publishing-stage visibility before commit, including create/update/delete/sunset/bulk import snapshots
 
 Editor-first note: the normal ingestion path is direct record maintenance in the Content Editor. CSV/XLSX import is supported as a secondary accelerator for bulk onboarding or migration.
 
