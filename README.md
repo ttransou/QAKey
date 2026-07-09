@@ -104,7 +104,7 @@ Large organizations often need controlled, auditable knowledge delivery. QAKey s
 - Deployment-flexible: run as a service, embed in existing products, or expose via API
 - Team separation: policy owners maintain content while engineering manages integration
 
-QAKey can be a practical "trusted answer layer" inside a broader knowledge architecture.
+QAKey can serve as a practical "trusted answer layer" within a broader knowledge architecture.
 
 ---
 
@@ -130,7 +130,7 @@ QAKey can be a practical "trusted answer layer" inside a broader knowledge archi
 
 ## Source-of-Truth Framework
 
-QAKey is built around a spreadsheet-like editing model for maintainers who should not need knowledge of coding, repositories, or YAML.
+QAKey is built around a spreadsheet-like editing model for maintainers who should not need to know how to code, work with repositories, or use YAML.
 They manage the approved question, answer, status, and review ownership, while QAKey handles identifiers, timestamps, validation, versioning, persistence, and index rebuilds automatically.
 
 See [docs/source-of-truth-framework.md](docs/source-of-truth-framework.md) for the full framework and maintainer workflow.
@@ -224,8 +224,8 @@ QAKey/
 ├── static/
 │   ├── css/style.css
 │   └── js/
-│       ├── app.js          Query interface behaviour
-│       └── editor.js       Editor behaviour
+│       ├── app.js          Query interface behavior
+│       └── editor.js       Editor behavior
 │
 ├── tests/
 │   ├── conftest.py         Shared fixtures
@@ -295,6 +295,40 @@ When `editor.require_auth` is enabled, `/editor` is protected by a built-in admi
 7. **Confidence threshold** — return the best match if confidence ≥ threshold
 
 Scores range from 0 to 1. The threshold is configurable in `config.yaml`.
+
+---
+
+## Deterministic fallback behavior
+
+QAKey does not guess when confidence is low. If a user question cannot be matched to an Active approved record with a confidence level above the configured threshold, QAKey returns a deterministic fallback message instead of generating an answer.
+
+Fallback behavior covers three cases:
+
+- **No match** — no Active record meets the confidence threshold.
+- **Ambiguous match** — more than one Active record is close enough that QAKey should not choose silently.
+- **Unavailable record** — a related record exists but is Draft or Inactive and should not be answered by end users.
+
+Fallback responses are configurable, but they are still controlled content. They should direct the user to rephrase, choose from approved canonical questions, or contact the appropriate human owner.
+
+```mermaid
+flowchart TD
+    A["User asks a question"] --> B["Normalize, tokenize, stem, and expand synonyms"]
+    B --> C["Score Active records"]
+    C --> D{"Best score above threshold?"}
+
+    D -->|No| E["Return deterministic no-match fallback"]
+    E --> F["Optionally log unmatched query for maintainer review"]
+
+    D -->|Yes| G{"Multiple close matches?"}
+    G -->|Yes| H["Return deterministic ambiguity fallback"]
+    H --> I["Show canonical question suggestions"]
+
+    G -->|No| J["Return matched golden answer verbatim"]
+    J --> K["Show confidence and matched canonical question if configured"]
+
+    classDef neutral fill:#ffffff,stroke:#111827,color:#111827,stroke-width:2px;
+    class A,B,C,D,E,F,G,H,I,J,K neutral;
+```
 
 ---
 
