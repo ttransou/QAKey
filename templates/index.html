@@ -128,7 +128,7 @@
 
 {% block scripts %}
 <script>
-  const NO_MATCH_MESSAGE = {{ config.matching.no_match_message | tojson }};
+  const NO_MATCH_MESSAGE = {{ config.fallback.no_match_message | tojson }};
 
   (function setupThemeMode() {
     const key = "qakey-theme-mode";
