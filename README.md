@@ -279,7 +279,7 @@ When `editor.require_auth` is enabled, `/editor` is protected by a built-in admi
 | `PUT` | `/api/records/<id>` | Update a record |
 | `DELETE` | `/api/records/<id>` | Delete a record |
 | `POST` | `/api/records/import-preview` | Preview records parsed from CSV/XLSX |
-| `GET` | `/api/records/export?format=csv|xlsx` | Export records for audit/archival |
+| `GET` | `/api/records/export?format=csv xlsx` | Export records for audit/archival |
 | `POST` | `/api/ingest/preview` | Preview deterministic raw text parsing |
 | `POST` | `/api/feedback` | Record helpful/not-helpful answer feedback as a compact alert |
 | `GET` | `/api/editor/feedback-alerts` | List unresolved feedback alerts for the editor |
