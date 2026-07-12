@@ -6,9 +6,11 @@
 
 ### Concept
 
-When QAKey receives unresolved feedback, no-match queries, low-confidence matches, or repeated ambiguous matches, it can notify the configured maintainer by email.
+QAKey may eventually support email alerts or digest notifications when review-worthy events accumulate. These events could include unmatched questions, low-confidence matches, ambiguous matches, user feedback, and stale records needing review.
 
-The alert should not be sent for every single event to avoid noise. Instead, QAKey should collect review items and send a digest.
+The purpose is to support maintainers who do not check the editor every day. Rather than silently collecting unresolved feedback, QAKey can notify the configured maintainer that content may need review. Alerts should be digest-based by default to avoid noise and should direct maintainers back to the review queue in the editor.
+
+This supports QAKey’s accessibility principle: keeping approved answers current should not depend on a maintainer remembering to manually inspect the system.
 
 Example digest summary:
 
@@ -35,3 +37,6 @@ Each event type maps to a maintainer task:
 | `ambiguous_match` | Multiple records were too close | Clarify records or add “do not match” guidance later |
 | `negative_feedback` | User marked answer unhelpful | Review answer wording or matching |
 | `stale_review` | Record is past review date | Confirm answer is still current |
+
+---
+
