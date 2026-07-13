@@ -54,3 +54,11 @@ Purpose: keep implementation and documentation priorities coherent with the curr
 - [ ] Add a simple docs index page under `docs/`
 - [ ] Add screenshots/GIFs for editor workflows
 - [ ] Add a 30-day rollout checklist for new teams
+
+## Future enhancements
+
+- [ ] Add maintainer digest alerts for review-worthy events
+- [ ] Add fallback contact routing for questions with no match
+- [ ] Add simple feedback buttons on answers
+- [ ] Add lightweight usage analytics for knowledge gaps
+- [ ] Add a static website widget embed
