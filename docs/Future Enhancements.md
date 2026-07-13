@@ -97,4 +97,182 @@ flowchart LR
     class Teams,Slack,Widget,Portal,API,Engine,Records,Fallback,Response neutral;
 ```
 
+---
+
+## “Needs human help” routing
+
+Fallback should not always end at “try again.”
+
+Future enhancement:
+
+If no match, show contact route:
+- Email support
+- Submit ticket
+- Ask the office
+- Contact records manager
+
+This could be configured by category or deployment.
+
+Possible fallback routing examples:
+
+I could not find an approved answer for that question.
+
+You can:
+- Try rephrasing your question
+- Contact support@example.org
+- Submit a support request
+- Ask the records manager
+
+This could be configured globally at first:
+```yaml
+fallback:
+  no_match_message: >
+    I could not find an approved answer for that question.
+
+  human_help:
+    enabled: true
+    label: "Contact the team"
+    type: "email"
+    value: "support@example.org"
+```
+Later, routing could be category-specific:
+```yaml
+fallback_routes:
+  default:
+    label: "Contact the team"
+    email: "info@example.org"
+
+  it-support:
+    label: "Submit an IT support request"
+    url: "https://example.org/support"
+
+  archives:
+    label: "Contact the archives team"
+    email: "archives@example.org"
+```
+This belongs early because it makes fallback behavior more humane and more useful.
+
+---
+
+## Feedback buttons on answers
+
+Simple end-user feedback:
+
+Was this helpful?
+[Yes] [No] [Needs update]
+
+If “No”:
+
+What went wrong?
+- Did not answer my question
+- Answer seems outdated
+- Instructions unclear
+- Other
+
+For the first version, do not overbuild it. Record the feedback event with:
+
+- timestamp
+- query
+- matched_record_id
+- canonical_question
+- confidence
+- feedback_type
+- optional_comment
+
+A local JSONL event log is enough:
+```json
+{"timestamp":"2026-07-08T15:40:00Z","type":"feedback","feedback":"needs_update","record_id":"qa-1234abcd","query":"how do i reset my login","confidence":0.71}
+```
+This supports your later review queue and email alerts.
+
+---
+
+## Usage analytics without surveillance
+
+Very important: analytics should help maintainers improve content without over-collecting user data.
+
+Useful metrics:
+
+- Most asked questions
+- Most common fallbacks
+- Low-confidence query patterns
+- Records with negative feedback
+- Questions with no alternate phrasings
+
+Avoid making this creepy or user-tracking-heavy. Avoid early collection of:
+
+- user identity
+- IP address
+- session trails
+- individual behavioral profiles
+
+A good principle:
+QAKey analytics should measure knowledge gaps, not surveil users.
+
+---
+
+## Static widget embed
+
+For small organizations, a simple website widget could be huge:
+
+```html
+<script src="qakey-widget.js"></script>
+```
+
+Or self-hosted:
+```html
+<script src="/static/js/qakey-widget.js"></script>
+<div id="qakey-widget" data-api="/api/query"></div>
+```
+
+Then they can embed QAKey into a website without a complex app integration.
+
+The widget should call the same API as the main UI:
+
+Widget → /api/query → QAEngine → approved answer or fallback
+
+Important principle:
+
+The widget changes the surface, not the answer behavior.
+
+This pairs well with Teams/Slack adapters later.
+
+---
+
+## Demo content packs
+
+Starter datasets for common use cases:
+
+Small nonprofit
+Historical society
+School club
+Internal IT support
+HR FAQ
+Volunteer organization
+Community archive
+
+Suggested structure:
+demo-packs/
+
+├── historical-society/
+
+├── small-nonprofit/
+
+├── internal-it-support/
+
+├── volunteer-organization/
+
+├── school-club/
+
+└── community-archive/
+
+Each pack could include:
+
+- qa_records.yaml
+- synonyms.yaml
+- README.md
+- sample_questions.md
+
+
+
     
