@@ -89,6 +89,12 @@ fallback:
   ambiguous_match_message: >
     I found more than one possible approved question.
     Please choose the closest match or rephrase your question.
+  human_help:
+    enabled: true
+    label: "Contact the team"
+    type: "email"
+    value: "support@example.org"
+    display_text: "Email support"
 ```
 
 | Key | Description |
@@ -97,6 +103,9 @@ fallback:
 | `fallback_log_path` | Path to the local JSON file used to store unresolved answer feedback alerts. The file is kept intentionally small and can be trimmed by resolving alerts in the Content Editor. |
 | `no_match_message` | Controlled message shown when no approved answer is available. |
 | `ambiguous_match_message` | Controlled message shown when more than one approved answer is plausible. |
+| `human_help` | Optional contact route shown with the no-match fallback. Set `enabled: false` to suppress it. Supported route values are `email` and `url`. |
+
+If `human_help` is not provided, QAKey falls back to `fallback_routes.default` when present. Both forms are resolved into a simple link in the user interface.
 
 When feedback alerts are enabled, low-confidence or not-helpful answer feedback is recorded as unresolved alerts for the Content Editor rather than being accumulated as a large free-form log.
 

@@ -11,6 +11,9 @@ const confidenceBadge= document.getElementById("confidenceBadge");
 const canonicalQ     = document.getElementById("canonicalQuestion");
 const answerText     = document.getElementById("answerText");
 const noMatchMessage = document.getElementById("noMatchMessage");
+const contactRoute   = document.getElementById("contactRoute");
+const contactRouteLabel = document.getElementById("contactRouteLabel");
+const contactRouteLink  = document.getElementById("contactRouteLink");
 const helpfulBtn     = document.getElementById("helpfulBtn");
 const notHelpfulBtn  = document.getElementById("notHelpfulBtn");
 const feedbackStatus = document.getElementById("feedbackStatus");
@@ -24,6 +27,18 @@ function confidenceClass(score) {
   if (score >= 0.70) return "confidence-high";
   if (score >= 0.45) return "confidence-medium";
   return "confidence-low";
+}
+
+function renderContactRoute(route) {
+  if (!route || !route.href || !route.display_text) {
+    contactRoute.classList.add("d-none");
+    return;
+  }
+
+  contactRouteLabel.textContent = route.label || "Contact the team";
+  contactRouteLink.textContent = route.display_text;
+  contactRouteLink.href = route.href;
+  contactRoute.classList.remove("d-none");
 }
 
 async function askQuestion(question) {
@@ -56,8 +71,10 @@ async function askQuestion(question) {
 
       matchedCard.classList.remove("d-none");
       noMatchCard.classList.add("d-none");
+      contactRoute.classList.add("d-none");
     } else {
-      noMatchMessage.textContent = NO_MATCH_MESSAGE || "No matching answer found.";
+      noMatchMessage.textContent = data.answer || NO_MATCH_MESSAGE || "No matching answer found.";
+      renderContactRoute(data.human_help);
       noMatchCard.classList.remove("d-none");
       matchedCard.classList.add("d-none");
     }
@@ -74,6 +91,7 @@ async function askQuestion(question) {
     console.error(err);
     resultPanel.classList.remove("d-none");
     noMatchMessage.textContent = "An error occurred. Please try again.";
+    contactRoute.classList.add("d-none");
     noMatchCard.classList.remove("d-none");
     matchedCard.classList.add("d-none");
   } finally {

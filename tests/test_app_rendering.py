@@ -75,3 +75,34 @@ def test_feedback_endpoint_creates_and_resolves_editor_alert(tmp_path, monkeypat
 
     final_alerts = client.get("/api/editor/feedback-alerts").get_json()
     assert final_alerts["count"] == 0
+
+
+def test_query_response_includes_contact_route_for_no_match(monkeypatch):
+    monkeypatch.setattr(
+        app_module,
+        "_fallback_cfg",
+        {
+            "enabled": True,
+            "no_match_message": "I could not find an approved answer for that question.",
+            "human_help": {
+                "enabled": True,
+                "label": "Contact the team",
+                "type": "email",
+                "value": "support@example.org",
+                "display_text": "Email support",
+            },
+        },
+    )
+
+    client = app.test_client()
+    response = client.post(
+        "/api/query",
+        json={"question": "zzxzxzxz totally unrelated gibberish"},
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["matched"] is False
+    assert payload["answer"].startswith("I could not find an approved answer for that question.")
+    assert payload["human_help"]["href"] == "mailto:support@example.org"
+    assert payload["human_help"]["display_text"] == "Email support"

@@ -36,7 +36,7 @@ QAKey is built around a simple idea:
 
 ## Current scope (July 8 2026)
 
-QAKey currently provides a local web UI, a spreadsheet-like content editor, a YAML-backed knowledge store, a REST API, a deterministic matching engine, and a publish workflow. The framework is intentionally minimal: advanced enterprise features such as SSO, role-based permissions, analytics dashboards, and managed cloud deployment are treated as extension points rather than core requirements.
+QAKey currently provides a local web UI, a spreadsheet-like content editor, a YAML-backed knowledge store, a REST API, a deterministic matching engine, a publish workflow, and a fallback contact route for no-match responses. The framework is intentionally minimal: advanced enterprise features such as SSO, role-based permissions, analytics dashboards, and managed cloud deployment are treated as extension points rather than core requirements.
 
 ---
 
@@ -122,6 +122,7 @@ QAKey can serve as a practical "trusted answer layer" within a broader knowledge
 | **Import and export** | CSV/XLSX import preview and CSV/XLSX export for audit and record keeping |
 | **Import templates** | Downloadable CSV/XLSX templates that match the import preview parser |
 | **Editor access boundary** | Optional admin/password gate for `/editor`, extensible to enterprise auth layers |
+| **Fallback contact route** | No-match responses can include a configured email or URL contact path |
 | **Synonym support** | Domain-specific terms and abbreviations handled transparently |
 | **REST API** | All operations available as JSON endpoints |
 | **Deployment-agnostic** | Web UI, API, chatbot integration, or embedded widget |
@@ -251,7 +252,7 @@ QAKey ships with a **web UI** and a **REST API**.
 
 ### Query interface (`/`)
 
-End-users type a question naturally. QAKey returns the matched approved answer with a confidence score, or a configurable no-match message. The query UI also includes feedback buttons so users can flag an answer as helpful or not helpful.
+End-users type a question naturally. QAKey returns the matched approved answer with a confidence score, or a configurable no-match message with an optional contact route. The query UI also includes feedback buttons so users can flag an answer as helpful or not helpful.
 
 ### Content editor (`/editor`)
 
@@ -312,7 +313,7 @@ Fallback behavior covers three cases:
 - **Ambiguous match** — more than one Active record is close enough that QAKey should not choose silently.
 - **Unavailable record** — a related record exists but is Draft or Inactive and should not be answered by end users.
 
-Fallback responses are configurable, but they are still controlled content. They should direct the user to rephrase, choose from approved canonical questions, or contact the appropriate human owner.
+Fallback responses are configurable, but they are still controlled content. They should direct the user to rephrase, choose from approved canonical questions, or contact the appropriate human owner. When a contact route is configured, QAKey exposes it as a simple link alongside the no-match message.
 
 When answer feedback is collected, QAKey stores only unresolved alerts in the configured feedback file. The Content Editor can mark those alerts addressed so the queue stays compact.
 

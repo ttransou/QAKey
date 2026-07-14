@@ -101,56 +101,31 @@ flowchart LR
 
 ## “Needs human help” routing
 
-Fallback should not always end at “try again.”
+- [x] Templatize fallback contact routing for the current runtime
 
-Future enhancement:
+Fallback should not always end at “try again.” In the current app, QAKey can show controlled fallback messages and an optional contact route, so the practical version of this idea is a message plus a direct path to human help.
 
-If no match, show contact route:
-- Email support
-- Submit ticket
-- Ask the office
-- Contact records manager
+Current-compatible template:
 
-This could be configured by category or deployment.
-
-Possible fallback routing examples:
-
-I could not find an approved answer for that question.
-
-You can:
-- Try rephrasing your question
-- Contact support@example.org
-- Submit a support request
-- Ask the records manager
-
-This could be configured globally at first:
 ```yaml
 fallback:
   no_match_message: >
     I could not find an approved answer for that question.
+    Please rephrase your question or email support@example.org.
 
-  human_help:
-    enabled: true
-    label: "Contact the team"
-    type: "email"
-    value: "support@example.org"
+  ambiguous_match_message: >
+    I found more than one possible approved question.
+    Please choose the closest match or rephrase your question.
 ```
-Later, routing could be category-specific:
-```yaml
-fallback_routes:
-  default:
-    label: "Contact the team"
-    email: "info@example.org"
 
-  it-support:
-    label: "Submit an IT support request"
-    url: "https://example.org/support"
+This fits the system as it works today:
 
-  archives:
-    label: "Contact the archives team"
-    email: "archives@example.org"
-```
-This belongs early because it makes fallback behavior more humane and more useful.
+- the app still renders a plain fallback message;
+- maintainers can include the contact route directly in that message;
+- the API also exposes a simple contact link when `fallback.human_help` or `fallback_routes.default` is configured;
+- the richer idea of category-specific structured routes can be added later without changing the user-facing intent.
+
+If structured routes are added later, they should extend this helper rather than replace it.
 
 ---
 

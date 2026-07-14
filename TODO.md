@@ -57,8 +57,9 @@ Purpose: keep implementation and documentation priorities coherent with the curr
 
 ## Future enhancements
 
+- [x] Templatize fallback contact routing for the current runtime
 - [ ] Add maintainer digest alerts for review-worthy events
-- [ ] Add fallback contact routing for questions with no match
+- [x] Add fallback contact routing for questions with no match
 - [ ] Add simple feedback buttons on answers
 - [ ] Add lightweight usage analytics for knowledge gaps
 - [ ] Add a static website widget embed

@@ -59,6 +59,15 @@ fallback:
     I found more than one possible approved question.
     Please choose the closest match or rephrase your question.
 
+  # Optional contact route shown alongside no-match fallback messaging.
+  # The app resolves this into a simple link/button in the user interface.
+  human_help:
+    enabled: true
+    label: "Contact the team"
+    type: "email"
+    value: "support@example.org"
+    display_text: "Email support"
+
   # Message shown when a related record may exist but is Draft or Inactive.
   unavailable_record_message: >
     This topic may exist in the knowledge base, but it is not currently

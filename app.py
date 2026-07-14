@@ -9,6 +9,7 @@ import os
 import uuid
 from functools import wraps
 from datetime import datetime, timezone
+from typing import Optional
 
 import yaml
 from flask import Flask, jsonify, redirect, render_template, request, send_file, session, url_for
@@ -38,6 +39,7 @@ with open(_CONFIG_PATH, encoding="utf-8") as _fh:
     _config: dict = yaml.safe_load(_fh)
 
 _store = QAStore(_config["knowledge"]["records_path"])
+_matching_cfg = _config.get("matching", {})
 
 _synonyms: dict = {}
 _synonyms_path = _config["knowledge"].get("synonyms_path", "")
@@ -49,7 +51,17 @@ if _synonyms_path and os.path.exists(_synonyms_path):
 _engine = QAEngine(
     records=_store.get_active(),
     synonyms=_synonyms,
-    confidence_threshold=_config.get("matching", {}).get("confidence_threshold", 0.25),
+    confidence_threshold=_matching_cfg.get("confidence_threshold", 0.25),
+    ambiguity_margin=_matching_cfg.get("ambiguity_margin", 0.08),
+    max_suggestions=_matching_cfg.get("max_suggestions", 3),
+    no_match_message=_config.get("fallback", {}).get(
+        "no_match_message",
+        "I could not find an approved answer for that question. Please rephrase your question or contact the appropriate team directly.",
+    ),
+    ambiguous_match_message=_config.get("fallback", {}).get(
+        "ambiguous_match_message",
+        "I found more than one possible approved question. Please choose the closest match or rephrase your question.",
+    ),
 )
 
 _editor_cfg = _config.get("editor", {})
@@ -245,6 +257,54 @@ def _feedback_logging_enabled() -> bool:
     return bool(_fallback_cfg.get("enabled", True)) and bool(_feedback_log_path())
 
 
+def _normalize_contact_route(route_cfg: object, default_label: str) -> Optional[dict]:
+    if not isinstance(route_cfg, dict):
+        return None
+
+    if not bool(route_cfg.get("enabled", True)):
+        return None
+
+    value = (
+        route_cfg.get("value")
+        or route_cfg.get("email")
+        or route_cfg.get("url")
+        or ""
+    ).strip()
+    if not value:
+        return None
+
+    route_type = str(route_cfg.get("type") or "").strip().lower()
+    if not route_type:
+        route_type = "url" if value.startswith(("http://", "https://")) else "email"
+
+    label = str(route_cfg.get("label") or default_label).strip() or default_label
+    display_text = str(route_cfg.get("display_text") or "").strip() or label
+    href = value if route_type == "url" else value.removeprefix("mailto:")
+    if route_type == "email" and not href.startswith("mailto:"):
+        href = f"mailto:{href}"
+
+    return {
+        "enabled": True,
+        "label": label,
+        "display_text": display_text,
+        "type": route_type,
+        "value": value,
+        "href": href,
+    }
+
+
+def _fallback_human_help() -> Optional[dict]:
+    route = _normalize_contact_route(_fallback_cfg.get("human_help"), "Contact the team")
+    if route is not None:
+        return route
+
+    fallback_routes = _fallback_cfg.get("fallback_routes", {})
+    if isinstance(fallback_routes, dict):
+        return _normalize_contact_route(fallback_routes.get("default"), "Contact the team")
+
+    return None
+
+
 def _load_feedback_alerts() -> list[dict]:
     log_path = _feedback_log_path()
     if not log_path:
@@ -413,6 +473,8 @@ def api_query():
     payload = result.to_dict()
     if payload.get("matched") and payload.get("answer"):
         payload["answer_html"] = render_answer_html(payload["answer"])
+    elif payload.get("answer"):
+        payload["human_help"] = _fallback_human_help()
     return jsonify(payload)
 
 
